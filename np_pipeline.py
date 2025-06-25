@@ -12,7 +12,7 @@ Computes surprisal-based metrics for each NP
 
 import os
 import re
-import csv
+import sys
 from collections import defaultdict
 
 from np_class import NounPhrase
@@ -29,6 +29,7 @@ def extract_all_NPs(file_content):
     
     NP_data = []
     sentence_tokens = []  # Store tokens for current sentence
+    token_counter = 1  # Generate token IDs since they're missing
     
     for i, line in enumerate(lines):
         # Skip metadata lines and empty lines
@@ -38,21 +39,23 @@ def extract_all_NPs(file_content):
                 nps = identify_NPs_in_sentence(sentence_tokens, text_id, metadata)
                 NP_data.extend(nps)
                 sentence_tokens = []
+                token_counter = 1  # Reset counter for new sentence
             continue
         
         # Parse token line
         columns = line.split('\t')
         if len(columns) >= 9:  # Ensure we have all required columns
             token_info = {
-                'id': columns[0],
-                'word': columns[1],
-                'lemma': columns[2] if len(columns) > 2 else columns[1],
-                'pos': columns[3] if len(columns) > 3 else 'UNK',
-                'deprel': columns[6] if len(columns) > 6 else 'UNK',
-                'head_id': columns[5] if len(columns) > 5 else '0',
-                'surprisal': columns[8] if len(columns) > 8 else '0.0'
+                'id': str(token_counter),  # Generate sequential ID
+                'word': columns[0],
+                'lemma': columns[1],
+                'pos': columns[2],
+                'head_id': columns[5],
+                'deprel': columns[6],
+                'surprisal': columns[8]
             }
             sentence_tokens.append(token_info)
+            token_counter += 1
     
     # Process last sentence if exists
     if sentence_tokens:
@@ -112,7 +115,7 @@ def process_corpus_files(data_folder, output_file):
     total_nps = 0
     
     for file in os.listdir(data_folder):
-        if not file.endswith('.txt'):  # Adjust extension as needed
+        if not file.endswith('.vrt'):  # Adjust extension as needed
             continue
             
         file_path = os.path.join(data_folder, file)
@@ -143,10 +146,10 @@ def process_corpus_files(data_folder, output_file):
 # Main function
 if __name__ == "__main__":
     # Data folder
-    data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/rsc_v604_udpipe_srp_202410'
+    data_folder = sys.argv[1]
     
     # Output file
-    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/all_NP_data.csv'
+    output_file = sys.argv[2]
     
     # Clear output file if it exists
     if os.path.exists(output_file):
