@@ -16,5 +16,6 @@ TODO:
 - [ ] write core function `identify_NPs_in_sentence` (Isa)
 - [ ] clean up paths and use pathlib for better path handling and folder creation (Ari)
 - [ ] use argparse instead of sys for better cli (Ari)
-- [ ] set up requirements / package the thing
+- [ ] set up requirements / package the thing (Ari)
+- [ ] check fluctuation cpx in light of Paolo's corrections (Ari)
 
