@@ -6,19 +6,20 @@ class NounPhrase:
     def __init__(self, text_id, metadata=None):
         self.text_id = text_id
         self.metadata = metadata or {}
-        self.tokens = []  # List of (word, pos, deprel, head_id, surprisal, token_id)
+        self.tokens = []
         self.head_token = None
         self.head_lemma = None
         self.head_deprel = None
         
         # Computed features
-        self.mean_abs_diff = None
-        self.quadratic_mean_transitions = None
+        self.uid_dev = None
+        self.sigma_gamma = None
         
-    def add_token(self, word, pos, deprel, head_id, surprisal, token_id):
+    def add_token(self, word, lemma, pos, deprel, head_id, surprisal, token_id):
         """Add a token to the NP."""
         token_info = {
             'word': word,
+            'lemma': lemma,
             'pos': pos,
             'deprel': deprel,
             'head_id': head_id,
@@ -30,21 +31,26 @@ class NounPhrase:
         # Check if this token is the head (NOUN with obj, nsubj, etc.)
         if pos == 'NOUN' and deprel in ['obj', 'nsubj', 'nsubj:pass', 'iobj']:
             self.head_token = token_info
-            self.head_lemma = word  # You might want to add actual lemma extraction
+            self.head_lemma = lemma
             self.head_deprel = deprel
     
     def compute_surprisal_metrics(self):
         """Compute surprisal-based transition metrics."""
         if len(self.tokens) < 2:
-            self.mean_abs_diff = 0.0
-            self.quadratic_mean_transitions = 0.0
+            self.uid_dev = 0.0
+            self.sigma_gamma = 0.0
             return
         
         surprisals = [token['surprisal'] for token in self.tokens]
         diffs = np.diff(surprisals)
         
+        # this implementation matches conceptually line 369-378 of postprocess_eval_results.py in https://github.com/thomashikaru/word-order-uid/tree/tacl-share/evaluation
+        # this implementation matches conceptually also the function in revisiting-uid.ipynb at https://github.com/rycolab/revisiting-uid/tree/main/src
+        # and should be faithful to Collins' (2014) UIDev proposal
         self.mean_abs_diff = np.mean(np.abs(diffs)) if diffs.size > 0 else 0.0
-        self.quadratic_mean_transitions = np.sqrt(np.mean(diffs**2)) if diffs.size > 0 else 0.0
+
+        # this implementation should be faithful to information fluctuation complexity applied to texts, as it appeared in Brasolin, Bienati (2025)
+        self.sigma_gamma = np.sqrt(np.mean((diffs - np.mean(diffs))**2))
     
     def is_valid_np(self):
         """Check if this is a valid NP (has head and at least one token)."""
@@ -53,10 +59,6 @@ class NounPhrase:
     def get_tokens_string(self):
         """Get space-separated string of all tokens."""
         return ' '.join([token['word'] for token in self.tokens])
-    
-    def get_surprisals_string(self):
-        """Get comma-separated string of all surprisal values."""
-        return ','.join([str(token['surprisal']) for token in self.tokens])
     
     def to_dict(self):
         """Convert NP to dictionary for CSV writing."""
@@ -75,12 +77,7 @@ class NounPhrase:
             'head_word': self.head_token['word'] if self.head_token else None,
             'head_lemma': self.head_lemma,
             'head_deprel': self.head_deprel,
-            'head_surprisal': self.head_token['surprisal'] if self.head_token else None,
-            'surprisals': self.get_surprisals_string(),
             'mean_surprisal': np.mean(surprisals) if surprisals else 0.0,
-            'min_surprisal': min(surprisals) if surprisals else 0.0,
-            'max_surprisal': max(surprisals) if surprisals else 0.0,
-            'std_surprisal': np.std(surprisals) if surprisals else 0.0,
-            'mean_abs_diff': self.mean_abs_diff,
-            'quadratic_mean_transitions': self.quadratic_mean_transitions
+            'uid_dev': self.uid_dev,
+            'sigma_gamma': self.sigma_gamma
         }

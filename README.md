@@ -17,5 +17,5 @@ TODO:
 - [ ] clean up paths and use pathlib for better path handling and folder creation (Ari)
 - [ ] use argparse instead of sys for better cli (Ari)
 - [ ] set up requirements / package the thing (Ari)
-- [ ] check fluctuation cpx in light of Paolo's corrections (Ari)
+- [x] check fluctuation cpx in light of Paolo's corrections (Ari)
 
