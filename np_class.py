@@ -47,7 +47,7 @@ class NounPhrase:
         # this implementation matches conceptually line 369-378 of postprocess_eval_results.py in https://github.com/thomashikaru/word-order-uid/tree/tacl-share/evaluation
         # this implementation matches conceptually also the function in revisiting-uid.ipynb at https://github.com/rycolab/revisiting-uid/tree/main/src
         # and should be faithful to Collins' (2014) UIDev proposal
-        self.uid_dev = np.mean(np.abs(diffs)) if diffs.size > 0 else 0.0
+        self.mean_abs_diff = np.mean(np.abs(diffs)) if diffs.size > 0 else 0.0
 
         # this implementation should be faithful to information fluctuation complexity applied to texts, as it appeared in Brasolin, Bienati (2025)
         self.sigma_gamma = np.sqrt(np.mean((diffs - np.mean(diffs))**2))

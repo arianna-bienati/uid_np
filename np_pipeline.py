@@ -2,7 +2,7 @@
 """
 Created on Fri Jun  20 12:48 2025
 
-@author: sonnet4 + ari (adapted from isabell)
+@author: sonnet4 + ari (adapted from isabel)
 
 Refactored script to extract all NPs from corpus files and write info to csv
 Takes syntactic and surprisal information for all NPs (not just compounds)
@@ -10,11 +10,13 @@ Extracts metadata: text ID, author, year, journal, primary topic
 Computes surprisal-based metrics for each NP
 """
 
+import os
 import re
+import sys
 from collections import defaultdict
 
 from np_class import NounPhrase
-from utils import extract_metadata
+from utils import extract_metadata, save_to_csv
 
 # regex for special characters, numbers
 special = r'(\W+\t)'
@@ -86,7 +88,7 @@ def identify_NPs_in_sentence(tokens, text_id, metadata):
             
             # Add the head token
             np.add_token(
-                token['word'], token['lemma'], token['pos'], token['deprel'],
+                token['word'], token['pos'], token['deprel'],
                 token['head_id'], token['surprisal'], token['id']
             )
             
@@ -95,7 +97,7 @@ def identify_NPs_in_sentence(tokens, text_id, metadata):
                 for dependent in heads_to_dependents[token['id']]:
                     if dependent['deprel'] in ['det', 'amod', 'compound', 'nmod', 'nummod', 'acl:relcl', 'acl']:
                         np.add_token(
-                            dependent['word'], dependent['lemma'], dependent['pos'], dependent['deprel'],
+                            dependent['word'], dependent['pos'], dependent['deprel'],
                             dependent['head_id'], dependent['surprisal'], dependent['id']
                         )
             
@@ -106,3 +108,52 @@ def identify_NPs_in_sentence(tokens, text_id, metadata):
                 nps.append(np)
     
     return nps
+
+def process_corpus_files(data_folder, output_file):
+    """Process all corpus files in the data folder."""
+    processed_count = 0
+    total_nps = 0
+    
+    for file in os.listdir(data_folder):
+        if not file.endswith('.vrt'):  # Adjust extension as needed
+            continue
+            
+        file_path = os.path.join(data_folder, file)
+        
+        try:
+            # Read corpus file
+            with open(file_path, 'r', encoding='utf-8') as f:
+                corpus_content = f.read()
+            
+            # Extract NP data
+            np_data = extract_all_NPs(corpus_content)
+            
+            # Save to CSV
+            save_to_csv(np_data, output_file)
+            
+            processed_count += 1
+            total_nps += len([np for np in np_data if np.is_valid_np()])
+            
+            print(f'Processing file {file}... Found {len(np_data)} NPs')
+            
+        except Exception as e:
+            print(f'Error processing {file}: {e}')
+    
+    print(f'\nProcessing complete:')
+    print(f'Files processed: {processed_count}')
+    print(f'Total NPs extracted: {total_nps}')
+
+# Main function
+if __name__ == "__main__":
+    # Data folder
+    data_folder = sys.argv[1]
+    
+    # Output file
+    output_file = sys.argv[2]
+    
+    # Clear output file if it exists
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    
+    # Process corpus files
+    process_corpus_files(data_folder, output_file)

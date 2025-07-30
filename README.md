@@ -7,15 +7,15 @@ To run the code:
 * in terminal write:
 
 ```bash
-python get_NP_data.py <your_input_folder> <your_output_folder/csv_file>
+python np_pipeline.py <your_input_folder> <your_output_folder/csv_file>
 ```
 input and output folders should already exist before running the pipeline.
 
 TODO: 
 
-- [x] write core function `identify_NPs_in_sentence` (Isa) -> see get_NP_data.py for a full implementation
-- [x] clean up paths and use pathlib for better path handling and folder creation (Ari)
-- [x] use argparse instead of sys for better cli (Ari)
+- [ ] write core function `identify_NPs_in_sentence` (Isa)
+- [ ] clean up paths and use pathlib for better path handling and folder creation (Ari)
+- [ ] use argparse instead of sys for better cli (Ari)
 - [ ] set up requirements / package the thing (Ari)
 - [x] check fluctuation cpx in light of Paolo's corrections (Ari)
 
