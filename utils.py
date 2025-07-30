@@ -35,8 +35,7 @@ def save_to_csv(data, output_file):
     header = [
         'text_id', 'author', 'year', 'journal', 'topic',
         'np_tokens', 'np_length', 'head_word', 'head_lemma', 'head_deprel',
-        'head_surprisal', 'surprisals', 'mean_surprisal', 'min_surprisal',
-        'max_surprisal', 'std_surprisal', 'mean_abs_diff', 'quadratic_mean_transitions'
+        'mean_surprisal', 'uid_dev', 'sigma_gamma'
     ]
     
     # Write to CSV
