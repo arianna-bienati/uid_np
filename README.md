@@ -29,6 +29,6 @@ TODO:
 * Coordination: TBD (cases like "Isabell and Arianna have submitted an abstract and a presentation" are for now excluded and only the first NP gets extracted (Isabell; an abstract); coordination remains in relative clauses such as "Isabell and Arianna who have submitted an abstract and a presentation will go to Siena" --> (Isabell who have submitted an abstract and a presentation)).
 
 Logical next steps:
-- [ ] write some tests to be sure about the functionality of the NPs extractors and its adherence to definitions of NPs.
+- [ ] write some tests to be sure about the functionality of the NPs extractor and its adherence to definition of NPs.
 - [ ] prepare slides
 - [ ] run statistical analysis
