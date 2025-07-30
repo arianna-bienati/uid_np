@@ -1,6 +1,6 @@
 import csv
-import os
 import re
+from pathlib import Path
 
 def extract_metadata(lines):
     """Extract metadata from corpus file lines."""
@@ -39,7 +39,7 @@ def save_to_csv(data, output_file):
     ]
     
     # Write to CSV
-    file_exists = os.path.exists(output_file) and os.path.getsize(output_file) > 0
+    file_exists = Path(output_file).exists() and Path(output_file).stat().st_size > 0
     
     with open(output_file, 'a', newline='', encoding='utf-8') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=header)
