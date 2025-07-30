@@ -108,15 +108,15 @@ def parse_sentences(file_path):
                                 avg_srp = sum(srp_values) / len(srp_values)
 
                                 if len(srp_values) < 3:
-                                    uid_dev = 0.0
-                                    sigma_gamma = 0.0
+                                    uid_dev = np.nan
+                                    sigma_gamma = np.nan
                                 else:
                                     diffs = np.diff(srp_values)
         
                                     # this implementation matches conceptually line 369-378 of postprocess_eval_results.py in https://github.com/thomashikaru/word-order-uid/tree/tacl-share/evaluation
                                     # this implementation matches conceptually also the function in revisiting-uid.ipynb at https://github.com/rycolab/revisiting-uid/tree/main/src
                                     # and should be faithful to Collins' (2014) UIDev proposal
-                                    uid_dev = np.mean(np.abs(diffs)) if diffs.size > 0 else 0.0
+                                    uid_dev = np.mean(np.abs(diffs))
 
                                     # this implementation should be faithful to information fluctuation complexity applied to texts, as it appeared in Brasolin, Bienati (2025)
                                     sigma_gamma = np.sqrt(np.mean((diffs - np.mean(diffs))**2))
