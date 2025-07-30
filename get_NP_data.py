@@ -5,132 +5,167 @@ Created on Fri Nov  8 16:45:23 2024
 @author: isabell
 
 script to get relevant NPs from corpus files and write info to csv
-consider only object NPs that are compounds
-take syntactic and surprisal information
-extract metadata: text ID, author, year, journal, primary topic
-
+- consider only NPs tagged as 'NOUN'
+- consider only subjects and direct objects
+- extract entire NP: head with all dependents
+- extract annotation for each token in NP
+- calculate Information Fluctuation Complexity based on surprisal annotation
+- extract metadata: text ID, author, year, journal, primary topic
 
 """
 
 import os
 import re
 import csv
+import sys
+
+from collections import deque
+import numpy as np
 
 
-# regex for special characters, numbers
-special = r'(\W+\t)'
-
-
-# function to extract compound NPs with annotation and metadata from corpus file
-def extract_compound_NPs(file_content):
-    # initialize variables
-    NP_data = []
-    lines = file_content.splitlines()
+# function to extract sentences from corpus file
+def parse_sentences(file_path):
     
     # initialize variables for metadata
+    text_id = None
     text_author = None
     text_year = None
     text_jrnl = None
-    text_primaryTopic = None
     
-    for i in range(len(lines)):
-        # initalize variables for NP info
-        compound_const_1 = None
-        const_1_srp = None
-        compound_const_2 = None
-        const_2_srp = None
-        compound_head = None
-        head_deprel = None
-        head_srp = None
-        
-        # extract metadata
-        if lines[i].startswith('<text_id '): # text ID
-            text_id = re.search(r'<text_id\s(.*?)>', lines[i]).group(1)
-        elif lines[i].startswith('<text_author '): # author
-            text_author = re.search(r'<text_author\s(.*)>', lines[i]).group(1)
-        elif lines[i].startswith('<text_year '): # author
-            text_year = re.search(r'<text_year\s(.*?)>', lines[i]).group(1)
-        elif lines[i].startswith('<text_jrnl '): # author
-            text_jrnl = re.search(r'<text_jrnl\s(.*?)>', lines[i]).group(1)
-        elif lines[i].startswith('<text_primaryTopic '): # author
-            text_primaryTopic = re.search(r'<text_primaryTopic\s(.*?)>', lines[i]).group(1)
+    sentences = [] # list of sentences
+    current_sentence = [] # current sentence: list of tokens
+    in_sentence = False
+    
+    NPs_in_file = [] # list for all NPs found in current file
+    
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
             
-        # check if current line is a word of a sentence (and not annotation)
-        if len(lines[i].strip()) > 0 and not lines[i].startswith('<') and not re.search(special, lines[i]):
-            columns = lines[i].split('\t') # get columns (word with annotation)
-            # check if word is compound constituent
-            if columns[6] == 'compound':
-                # check if second line (i.e. next word) exists
-                if len(lines[i+1].strip()) and not lines[i+1].startswith('<'):
-                    next_columns = lines[i+1].split('\t')
-                    # check if second word is compound constituent
-                    if next_columns[6] == 'compound':
-                        # check if third line exists
-                        if len(lines[i+2].strip()) and not lines[i+2].startswith('<'):
-                            next_columns_2 = lines[i+2].split('\t')
-                            # check if third word is head noun and object
-                            if next_columns_2[2] == 'NOUN' and next_columns_2[6] == 'obj':
-                                compound_const_1 = columns[0]
-                                const_1_srp = columns[8]
-                                compound_const_2 = next_columns[0]
-                                const_2_srp = next_columns[8]
-                                compound_head = next_columns_2[0]
-                                head_deprel = next_columns_2[6]
-                                head_srp = next_columns_2[8]
-                                NP_data.append({'text_id': text_id,
-                                                'author': text_author,
-                                                'year': text_year,
-                                                'journal': text_jrnl,
-                                                'topic': text_primaryTopic,
-                                                'const1': compound_const_1,
-                                                'const1_srp': const_1_srp,
-                                                'const2': compound_const_2,
-                                                'const2_srp': const_2_srp,
-                                                'head': compound_head,
-                                                'head_deprel': head_deprel,
-                                                'head_srp': head_srp})
-                                i += 2 # jump to next word after compound
-                    # check if second word is head noun
-                    elif next_columns[2] == 'NOUN' and next_columns[6] == 'obj':
-                        compound_const_1 = columns[0]
-                        const_1_srp = columns[8]
-                        compound_head = next_columns[0]
-                        head_deprel = next_columns[6]
-                        head_srp = next_columns[8]
-                        NP_data.append({'text_id': text_id,
-                                        'author': text_author,
-                                        'year': text_year,
-                                        'journal': text_jrnl,
-                                        'topic': text_primaryTopic,
-                                        'const1': compound_const_1,
-                                        'const1_srp': const_1_srp,
-                                        'const2': compound_const_2,
-                                        'const2_srp': const_2_srp,
-                                        'head': compound_head,
-                                        'head_deprel': head_deprel,
-                                        'head_srp': head_srp})
-                        i += 3 # jump to next word after compound
-                       
-    return NP_data
+            # extract metadata
+            if line.startswith('<text_id '): # text ID
+                text_id = re.search(r'<text_id\s(.*?)>', line).group(1)
+            elif line.startswith('<text_author '): # author
+                text_author = re.search(r'<text_author\s(.*)>', line).group(1)
+            elif line.startswith('<text_year '): # author
+                text_year = re.search(r'<text_year\s(.*?)>', line).group(1)
+            elif line.startswith('<text_jrnl '): # author
+                text_jrnl = re.search(r'<text_jrnl\s(.*?)>', line).group(1)
+            
+            if re.match(r'<s_s10local\b.*>', line): # sentence starts
+                in_sentence = True
+                current_sentence = [] # initialize list for current sentence
+                
+            elif line == '</s_s10local>': # sentence ends
+                in_sentence = False
+                if current_sentence:
+                    sentences.append(current_sentence) # add current sentence
+                    
+                    children = {} # dictionary for heads with children
+                    # create dependency graph of heads and their children
+                    for idx, word in enumerate(current_sentence, start=1):
+                        head = int(word[5]) # get the heads
+                        children.setdefault(head, []).append(idx) # save children
+ 
+                    # go through all the tokens in the current sentence
+                    for idx, word in enumerate(current_sentence, start=1):
+                        # if you encounter a noun which is (passive) subject or direct object
+                        if word[2] == 'NOUN' and (word[6] == 'nsubj' or word[6] == 'nsubj:pass' or word[6] == 'obj'):
+                            
+                            NP = [] # initialize list for current NP
+                           
+                            visited = set([idx]) # tokens that have been visited
+                            queue = deque([idx]) # create double-ended queue
+
+                            # go through queue
+                            while queue:
+                                current = queue.popleft() # take left element in queue
+                                
+                                for child in children.get(current, []):
+                                    if child not in visited:
+                                        visited.add(child)
+                                        queue.append(child)
+                                        
+                            sorted_indices = sorted(visited)
+
+                            # get NP tokens and following attributes:
+                            # word, lemma, upos, head/parent, urel, s10local
+                            NP = [[current_sentence[i-1][0], # word
+                                   current_sentence[i-1][1], # lemma
+                                   current_sentence[i-1][2], # upos
+                                   current_sentence[i-1][5], # parent
+                                   current_sentence[i-1][6], # urel
+                                   current_sentence[i-1][-1]] # s10local
+                                  for i in sorted_indices]
+                            
+                            head_synt_role = word[6]
+                            head_lemma = word[1]
+                            
+                            if NP:
+                                # get surprisal values of all tokens
+                                srp_values = [float(tok[-1]) for tok in NP]
+                                avg_srp = sum(srp_values) / len(srp_values)
+
+                                if len(srp_values) < 3:
+                                    uid_dev = 0.0
+                                    sigma_gamma = 0.0
+                                else:
+                                    diffs = np.diff(srp_values)
+        
+                                    # this implementation matches conceptually line 369-378 of postprocess_eval_results.py in https://github.com/thomashikaru/word-order-uid/tree/tacl-share/evaluation
+                                    # this implementation matches conceptually also the function in revisiting-uid.ipynb at https://github.com/rycolab/revisiting-uid/tree/main/src
+                                    # and should be faithful to Collins' (2014) UIDev proposal
+                                    uid_dev = np.mean(np.abs(diffs)) if diffs.size > 0 else 0.0
+
+                                    # this implementation should be faithful to information fluctuation complexity applied to texts, as it appeared in Brasolin, Bienati (2025)
+                                    sigma_gamma = np.sqrt(np.mean((diffs - np.mean(diffs))**2))
+                                
+                                # add current NP to list of NPs for current sentence
+                    
+                                # add NP data to list of all NPs in file
+                                NPs_in_file.append({
+                                    "text_id": text_id,
+                                    "author": text_author,
+                                    "year": text_year,
+                                    "journal": text_jrnl,
+                                    "NP": NP, 
+                                    "NP_len": len(NP),
+                                    "NP_str": ' '.join(token[0] for token in NP),
+                                    "head_lemma": head_lemma,
+                                    "head_synt_role": head_synt_role,
+                                    "avg_srp": avg_srp,
+                                    "uid_dev": uid_dev,
+                                    "sigma_gamma": sigma_gamma
+                                    })
+                    #print(f"[{text_id}] -> {NPs}")
+             
+            # while in the sentence
+            elif in_sentence: 
+                if line:  # skip empty lines
+                    token = line.split()
+                    current_sentence.append(token) # add tokens to current sentence
+
+    return NPs_in_file
 
 
 # function to add NP data to csv file
-def save_to_csv(data, output_file):   
+def save_to_csv(NPs_in_file, output_file):   
     # open output file
     with open(output_file, 'a', newline = '', encoding = 'utf-8') as csv_file:
         # define csv header
-        header = ['text_id', 'author', 'year', 'journal', 'topic',
-                  'const1', 'const1_srp', 'const2', 'const2_srp',
-                  'head', 'head_deprel', 'head_srp']
+        header = ['text_id', 'author', 'year', 'journal', 
+                  'NP', 'NP_len', 'NP_str', 'head_lemma', 'head_synt_role',
+                  'avg_srp', 'uid_dev', 'sigma_gamma']
         writer = csv.DictWriter(csv_file, fieldnames = header)
         
         # add header if output file is empty
         if os.path.getsize(output_file) == 0:
             writer.writeheader()
         
-        # write NP data to file only if there is a compound
-        for row in data:
-            if row.get('head'):
+        # write NP data to file
+        for row in NPs_in_file:
+            if row['NP']: # only if there is NP data
                 writer.writerow(row)
         
     
@@ -139,31 +174,33 @@ def process_corpus_files(data_folder, output_file):
     # go through each file in corpus data folder
     for file in os.listdir(data_folder):
         
-        # get path of corpus file
-        file_path = os.path.join(data_folder, file)
+        # only consider .vrt files
+        if file.endswith('.vrt'):
         
-        # open and read corpus file
-        corpus_file = open(file_path, 'r', encoding = 'utf-8').read()
+            print(f'Processing file {file}...')
+            
+            # get path of corpus file
+            file_path = os.path.join(data_folder, file)
+            
+            # open corpus file, extract sentences and NPs
+            NPs_in_file = parse_sentences(file_path)
+            
+            # add NP data to output csv file
+            save_to_csv(NPs_in_file, output_file)
+            print(f'Added NPs to output file: {output_file}')
         
-        # get NP data from corpus file
-        NP_data = extract_compound_NPs(corpus_file)
-        
-        # add NP data to output csv file
-        save_to_csv(NP_data, output_file)
-        
-        print(f'Processing file {file}...')
         
         
 # main function
 if __name__ == "__main__":
    
     # data folder
-    data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/rsc_v604_udpipe_srp_202410'
-    #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/test'
+    #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/rsc_v604_udpipe_srp_202410'
+    data_folder = sys.argv[1]
     
     # output file
-    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/NP_data.csv'
-    #output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/preprocess/test.csv'
+    # output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/NP_data.csv'
+    output_file = sys.argv[2]
     
     # process corpus files
     process_corpus_files(data_folder, output_file)
