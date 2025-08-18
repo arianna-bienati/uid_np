@@ -1,0 +1,210 @@
+---
+title: "uid_np_analysis"
+output: html_document
+date: "2025-08-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries and data
+
+filter out texts after 1990/1989 !
+
+```{r}
+library(tidyverse)
+
+np_data <- read_csv("source/NP_data_20250731.csv")
+glimpse(np_data)
+```
+```{r}
+summary(np_data)
+```
+
+
+## Distribs
+
+```{r}
+distribs <- np_data %>%
+    pivot_longer(cols = avg_srp:sigma_gamma,
+                 names_to = "measure",
+                 values_to = "value") %>%
+    filter(!is.na(value)) %>%
+    ggplot(aes(x=value)) +
+    geom_histogram() +
+    facet_wrap(~measure, scales = "free_x") 
+
+distribs
+```
+
+```{r}
+library(fitdistrplus)
+
+sample <- np_data %>%
+  group_by(year) %>%
+  sample_n(100) %>%
+  ungroup() %>%
+  filter(sigma_gamma != 0)
+
+descdist(data = sample$sigma_gamma, boot=1000)
+```
+
+
+## UID and year
+
+This is very packed!!
+
+```{r, echo=FALSE}
+np_data %>%
+  filter(!is.na(sigma_gamma)) %>%
+  ggplot(aes(x = year, y = sigma_gamma)) +
+    geom_jitter()
+```
+
+```{r}
+max(np_data$year)
+min(np_data$year)
+```
+
+```{r}
+yearly_summary <- np_data %>%
+  group_by(year) %>%
+  summarise(
+    mean_val = mean(sigma_gamma, na.rm = TRUE),
+    median_val = median(sigma_gamma, na.rm = TRUE),
+    q25 = quantile(sigma_gamma, 0.25, na.rm = TRUE),
+    q75 = quantile(sigma_gamma, 0.75, na.rm = TRUE)
+  )
+```
+
+```{r}
+ggplot(yearly_summary, aes(x = year, y = mean_val)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.2) +
+  theme_minimal()
+```
+```{r}
+np_data %>%
+  filter(!is.na(sigma_gamma)) %>%
+  ggplot(aes(x = factor(year), y = sigma_gamma)) +
+    geom_boxplot() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+library(ggridges)
+
+np_data %>%
+  filter(!is.na(sigma_gamma)) %>%
+  ggplot(aes(x = sigma_gamma, y = factor(year), fill = factor(year))) +
+    geom_density_ridges(alpha = 0.7, scale = 1.2, rel_min_height = 0.01) +
+    theme_minimal() +
+    theme(legend.position = "none")
+```
+
+## UID and NP length
+
+heteroschedasticity, again... would probably be better to introduce also vocab size, bc this is what these measures are sensitive to?
+
+OR how to take this into account when stat modelling? GAMs?
+
+```{r}
+ggplot(sample, aes(x = NP_len, y = sigma_gamma)) +
+  geom_point()
+```
+```{r}
+
+np_data %>%
+  mutate(NP_bin = cut(NP_len, breaks = seq(0, max(NP_len, na.rm = TRUE), by = 5))) %>%
+  filter(!is.na(sigma_gamma)) %>%
+  ggplot(aes(x = NP_bin, y = sigma_gamma)) +
+    geom_boxplot() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  
+```
+
+
+
+```{r}
+library(tidyverse)
+
+# Bin NP_len (e.g., groups of 5 or 10)
+df_var <- np_data %>%
+  mutate(NP_bin = cut(NP_len, breaks = seq(0, max(NP_len, na.rm = TRUE), by = 5))) %>%
+  group_by(NP_bin) %>%
+  summarise(
+    n = n(),
+    var_sigma = var(sigma_gamma, na.rm = TRUE),
+    sd_sigma = sd(sigma_gamma, na.rm = TRUE),
+    mean_len = mean(NP_len, na.rm = TRUE)
+  ) %>%
+  filter(n > 100)   # drop very sparse bins
+
+# Plot variance trend
+ggplot(df_var, aes(x = mean_len, y = var_sigma)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    title = "Variance of sigma_gamma vs NP_len bins",
+    x = "Mean NP_len (per bin)",
+    y = "Variance of sigma_gamma"
+  )
+
+```
+
+### Exract NPs for inspection
+
+```{r}
+
+# Bin NP_len (every 5 tokens, adjust as needed)
+df_bins <- np_data %>%
+  mutate(NP_bin = cut(NP_len, breaks = seq(0, max(NP_len, na.rm = TRUE), by = 5), include.lowest = TRUE))
+
+# For each bin, take top 10 and bottom 10 sigma_gamma
+df_examples <- df_bins %>%
+  group_by(NP_bin) %>%
+  arrange(sigma_gamma) %>%
+  slice_head(n = 10) %>%
+  mutate(extreme = "low") %>%
+  bind_rows(
+    df_bins %>%
+      group_by(NP_bin) %>%
+      arrange(desc(sigma_gamma)) %>%
+      slice_head(n = 10) %>%
+      mutate(extreme = "high")
+  ) %>%
+  ungroup() %>%
+  filter(NP_len <= 30)
+
+# Save to CSV
+write_csv(df_examples, "target/NP_len_sigma_examples.csv")
+
+```
+
+
+## UID and synt role
+
+there seems to be not a huge difference!
+
+```{r}
+np_data %>%
+  filter(!is.na(sigma_gamma)) %>%
+  ggplot(aes(x = head_synt_role, y = sigma_gamma)) +
+    geom_boxplot()
+```
+
+## NP length and time
+
+```{r}
+np_data %>%
+  filter(!is.na(sigma_gamma)) %>%
+  ggplot(aes(x = year, y = NP_len)) +
+    geom_jitter()
+```
+
+```{r}
+
+```
+
