@@ -1,0 +1,154 @@
+---
+title: "analysis_fluct_comp_20250820"
+author: "Isabell Landwehr"
+date: "2025-08-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About
+
+Mixed-effects linear regression models for the UID measure Information Fluctuation Complexity (IFC, standard deviation of surprisal differences).
+
+## Set up
+
+```{r, warning=FALSE}
+# libraries
+library(car)
+library(DHARMa)
+library(dplyr)
+library(ggeffects)
+library(ggplot2)
+library(glmmTMB)
+library(lmerTest)
+library(lmeresampler)
+library(performance)
+library(sjPlot)
+```
+
+## Load data
+
+```{r}
+# open data file
+data <- read.table(file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_20250731.csv",
+                   sep=",",
+                   header=TRUE,
+                   quote='"',
+                   fill=TRUE)
+head(data)
+```
+
+## Preprocessing
+
+Filter data:
+- remove observations whose head lemma occurs less than 5 times
+- remove observations from after the year 1989
+- remove observations without a sigma_gamma or uid_dev value
+
+```{r}
+# filter data
+np_data <- data %>%
+  group_by(head_lemma) %>% # remove observations with lemma occurrence >= 5
+  filter(n() >= 5) %>%
+  ungroup() %>%
+  filter(year <= 1989) %>% # remove observations after 1989
+  filter(!is.na(uid_dev)) %>% # remove observations without uid_dev value
+  filter(!is.na(sigma_gamma)) # remove observations without sigma_gamma value
+```
+
+Transform variables:
+- center year variable
+
+```{r}
+# transform year variable
+np_data$year_c <- scale(np_data$year, center=T, scale=F)
+```
+
+Apply contrast coding:
+- treatment coding for syntactic role: baseline = nsubj
+
+```{r}
+# transform syntactic role to factor
+np_data$head_synt_role_F <- as.factor(np_data$head_synt_role)
+levels(np_data$head_synt_role_F) # show factor levels
+```
+```{r}
+# apply contrast coding
+contrasts(np_data$head_synt_role_F) = contr.treatment(3, base=1) # baseline=nsubj
+```
+
+
+## Sample data
+
+Get stratified (by year) data sample.
+
+```{r}
+set.seed(24)
+data_sample <- np_data %>%
+  group_by(year) %>%  # stratify by year
+  sample_frac(0.01) %>%  # take 0.1 % from each category
+  ungroup()
+```
+
+## Fit model with sampled data
+
+Model 1: Fit a simple model with interaction of year and NP length and random intercepts for head noun lemma and author.
+
+```{r}
+# model 1: model with interaction and random intercepts
+lm_sigma_1 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len
+                           + head_synt_role_F
+                           + (1|head_lemma)
+                           + (1|author),
+                           data = data_sample)
+```
+
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_sigma_1)
+# random effects variance
+VarCorr(lm_sigma_1)
+```
+```{r}
+# check residuals
+sim_lm_sigma_1 <- DHARMa::simulateResiduals(lm_sigma_1)
+DHARMa::plotQQunif(sim_lm_sigma_1) # create qq-plot
+DHARMa::plotResiduals(sim_lm_sigma_1) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_sigma_1, form = data_sample$year_c) # plot residuals against predictor
+```
+
+## Cross-Validation
+
+
+## Visualization
+
+Visualize the results of the models.
+
+Model 1
+
+```{r}
+# plot effect of time
+ggeffects::ggeffect(lm_sigma_1, c("year_c")) %>%
+  plot() +
+  labs(x = "Time",
+       y = "Predicted Uniform Information Density (sigma gamma)",
+       title = "")
+# plot effect of NP length
+ggeffects::ggeffect(lm_sigma_1, c("NP_len")) %>%
+  plot() +
+  labs(x = "Number of Constituents",
+       y = "Predicted Uniform Information Density (sigma gamma)",
+       title = "")
+# plot effect of syntactic role
+ggeffects::ggeffect(lm_sigma_1, c("head_synt_role_F")) %>%
+  plot() +
+  labs(x = "Head Syntactic Role",
+       y = "Predicted Uniform Information Density (sigma gamma)",
+       title = "")
+```
+
