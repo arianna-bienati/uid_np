@@ -8,7 +8,7 @@ script to get relevant NPs from corpus files and write info to csv
 - consider only NPs tagged as 'NOUN'
 - consider only subjects and direct objects
 - extract entire NP: head with all dependents
-- extract annotation for each token in NP
+- extract relevant annotation for each token in NP (word, lemma, upos, head/parent, urel, s50local)
 - calculate Information Fluctuation Complexity based on surprisal annotation
 - extract metadata: text ID, author, year, journal, primary topic
 
@@ -90,19 +90,21 @@ def parse_sentences(file_path):
                             sorted_indices = sorted(visited)
 
                             # get NP tokens and following attributes:
-                            # word, lemma, upos, head/parent, urel, s10local
+                            # word, lemma, upos, head/parent, urel, s50
                             NP = [[current_sentence[i-1][0], # word
                                    current_sentence[i-1][1], # lemma
                                    current_sentence[i-1][2], # upos
                                    current_sentence[i-1][5], # parent
                                    current_sentence[i-1][6], # urel
-                                   current_sentence[i-1][-1]] # s10local
+                                   current_sentence[i-1][-4]] # s50
                                   for i in sorted_indices]
                             
                             head_synt_role = word[6]
                             head_lemma = word[1]
                             
                             if NP:
+                                #for tok in NP:
+                                    #print(tok)
                                 # get surprisal values of all tokens
                                 srp_values = [float(tok[-1]) for tok in NP]
                                 avg_srp = sum(srp_values) / len(srp_values)
@@ -195,12 +197,16 @@ def process_corpus_files(data_folder, output_file):
 if __name__ == "__main__":
    
     # data folder
-    #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/rsc_v604_udpipe_srp_202410'
-    data_folder = sys.argv[1]
+    # data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/rsc_v604_udpipe_srp_202410'
+    #data_folder = sys.argv[1]
+    # data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test'
+    data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
     
     # output file
     # output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/NP_data.csv'
-    output_file = sys.argv[2]
+    #output_file = sys.argv[2]
+    # output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test/test_v3.csv'
+    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_v1.csv'
     
     # process corpus files
     process_corpus_files(data_folder, output_file)
