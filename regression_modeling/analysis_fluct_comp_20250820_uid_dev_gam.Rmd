@@ -1,0 +1,121 @@
+---
+title: "analysis_fluct_comp_20250820"
+author: "Isabell Landwehr"
+date: "2025-08-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About
+
+Generalized additive regression models for the UID measure UIDev (average of surprisal differences).
+
+## Set up
+
+```{r, warning=FALSE, message=FALSE}
+# libraries
+library(car)
+library(DHARMa)
+library(dplyr)
+library(ggeffects)
+library(ggplot2)
+library(mgcv)
+library(performance)
+library(sjPlot)
+```
+
+## Load data
+
+```{r}
+# open data file
+data <- read.table(file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_20250731.csv",
+                   sep=",",
+                   header=TRUE,
+                   quote='"',
+                   fill=TRUE)
+head(data)
+```
+
+## Preprocessing
+
+Filter data:
+- remove observations whose head lemma occurs less than 5 times
+- remove observations from after the year 1989
+- remove observations without a sigma_gamma or uid_dev value
+
+```{r}
+# filter data
+np_data <- data %>%
+  group_by(head_lemma) %>% # remove observations with lemma occurrence >= 5
+  filter(n() >= 5) %>%
+  ungroup() %>%
+  filter(year <= 1989) %>% # remove observations after 1989
+  filter(!is.na(uid_dev)) %>% # remove observations without uid_dev value
+  filter(!is.na(sigma_gamma)) # remove observations without sigma_gamma value
+```
+
+Transform variables:
+- center year variable
+
+```{r}
+# transform year variable
+np_data$year_c <- scale(np_data$year, center=T, scale=F)
+```
+
+Apply contrast coding:
+- treatment coding for syntactic role: baseline = nsubj
+
+```{r}
+# transform syntactic role to factor
+np_data$head_synt_role_F <- as.factor(np_data$head_synt_role)
+levels(np_data$head_synt_role_F) # show factor levels
+```
+```{r}
+# apply contrast coding
+contrasts(np_data$head_synt_role_F) = contr.treatment(3, base=1) # baseline=nsubj
+```
+
+Transform variables to factors.
+
+```{r}
+np_data$head_lemma_F <- as.factor(np_data$head_lemma)
+np_data$author_F <- as.factor(np_data$author)
+```
+
+
+## Sample data
+
+Get stratified (by year) data sample.
+
+```{r}
+set.seed(372)
+data_sample <- np_data %>%
+  group_by(year) %>%  # stratify by year
+  sample_frac(0.001) %>%  # take 0.01 % from each category
+  ungroup()
+```
+
+## Fit model with sampled data: uid_dev
+
+Fit a generalized linear model model with interaction of year and NP length and random intercepts for head noun lemma and author.
+
+```{r}
+# model with random intercept
+gam_sigma_1 <- mgcv::bam(uid_dev ~ s(year_c)
+                       + s(NP_len)
+                       + s(head_lemma_F, bs="re"),
+                       data = data_sample)
+```
+
+Model summary.
+
+```{r}
+summary(gam_sigma_1)
+# write model summary to file
+output <- capture.output(summary(gam_sigma_1))
+cat("model_summary", output, file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_uid_dev_gam/model_summary.txt", sep="\n", append=TRUE)
+```
+
