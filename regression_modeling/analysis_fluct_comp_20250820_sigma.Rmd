@@ -15,17 +15,18 @@ Mixed-effects linear regression models for the UID measure Information Fluctuati
 
 ## Set up
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
 # libraries
 library(car)
 library(DHARMa)
 library(dplyr)
+library(future.apply)
 library(ggeffects)
 library(ggplot2)
 library(glmmTMB)
-library(lmerTest)
-library(lmeresampler)
+library(pbapply)
 library(performance)
+library(rsample)
 library(sjPlot)
 ```
 
@@ -81,21 +82,25 @@ contrasts(np_data$head_synt_role_F) = contr.treatment(3, base=1) # baseline=nsub
 ```
 
 
-## Sample data
+## Fit simple model
+
+# Sample data
 
 Get stratified (by year) data sample.
 
 ```{r}
 set.seed(24)
-data_sample <- np_data %>%
+data_sample_1 <- np_data %>%
   group_by(year) %>%  # stratify by year
   sample_frac(0.01) %>%  # take 0.1 % from each category
   ungroup()
 ```
 
-## Fit model with sampled data
+# Fit model with sampled data
 
-Model 1: Fit a simple model with interaction of year and NP length and random intercepts for head noun lemma and author.
+Model 1: Fit model with
+- interaction of year and NP length
+- random intercepts for head noun lemma and author
 
 ```{r}
 # model 1: model with interaction and random intercepts
@@ -103,7 +108,7 @@ lm_sigma_1 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len
                            + head_synt_role_F
                            + (1|head_lemma)
                            + (1|author),
-                           data = data_sample)
+                           data = data_sample_1)
 ```
 
 Perform model diagnostics.
@@ -119,10 +124,161 @@ VarCorr(lm_sigma_1)
 sim_lm_sigma_1 <- DHARMa::simulateResiduals(lm_sigma_1)
 DHARMa::plotQQunif(sim_lm_sigma_1) # create qq-plot
 DHARMa::plotResiduals(sim_lm_sigma_1) # plot residuals against expected value
-DHARMa::plotResiduals(sim_lm_sigma_1, form = data_sample$year_c) # plot residuals against predictor
+DHARMa::plotResiduals(sim_lm_sigma_1, form = data_sample_1$year_c) # plot residuals against predictor
 ```
 
+Model 2: Fit model with
+- interaction of year and NP length
+- random intercepts for head noun lemma and author
+- random slope for head syntactic role by lemma
+
+Note: Random slopes for NP length and year by lemma led to singular fit.
+
+```{r}
+# model 2: model with interaction and random intercepts
+lm_sigma_2 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len
+                           + head_synt_role_F
+                           + (1+head_synt_role_F|head_lemma)
+                           + (1|author),
+                           data = data_sample_1)
+```
+
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_sigma_2)
+# random effects variance
+VarCorr(lm_sigma_2)
+```
+Check residuals.
+
+```{r}
+# check residuals
+sim_lm_sigma_2 <- DHARMa::simulateResiduals(lm_sigma_2)
+DHARMa::plotQQunif(sim_lm_sigma_2) # create qq-plot
+DHARMa::plotResiduals(sim_lm_sigma_2) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_sigma_2, form = data_sample_1$year_c) # plot residuals against predictor
+```
+
+
 ## Cross-Validation
+
+# Sample data
+
+Sample data for cross-validation (due to dataset being very large). Sample is stratified by year.
+
+```{r}
+set.seed(25)
+data_sample_2 <- np_data %>%
+  group_by(year) %>%  # stratify by year
+  sample_frac(0.01) %>%  # take 1% from each category
+  ungroup()
+```
+
+# Run Cross-Validation
+
+Prepare parallelization.
+
+```{r}
+# use all available cores except one
+future::plan(future::multisession, workers = parallel::detectCores() - 1)
+```
+
+Create 10 folds.
+
+```{r}
+set.seed(12)
+# create 10 folds
+folds <- rsample::vfold_cv(data_sample_2, v = 10)
+```
+
+Run cross-validation iteratively for each fold: Fit model with training data, then test with test data.
+
+```{r}
+results <- future.apply::future_lapply(
+  folds$splits,
+  function(split) {
+    # select train and test data
+    train <- rsample::analysis(split)
+    test  <- rsample::assessment(split)
+  
+    # fit mixed-effects model
+    fit <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * NP_len
+                            + head_synt_role_F
+                            + (1|head_lemma)
+                            + (1|author), 
+                            data = train)
+  
+    # predict on test data
+    preds <- predict(fit, newdata = test, allow.new.levels = TRUE)
+  
+    # compute error metrics
+    # RMSE = Root Mean Squared Error
+    # MAE = Mean Absolute Error
+    dplyr::tibble(
+      rmse = sqrt(mean((test$sigma_gamma - preds)^2)),
+      mae  = mean(abs(test$sigma_gamma - preds))
+    )
+  },
+  future.seed = TRUE,
+  future.scheduling = 1,
+  future.packages = c("lmerTest", "rsample", "dplyr")
+)
+```
+
+Summarize the error metrics.
+
+```{r}
+cv_results <- dplyr::bind_rows(results)
+
+cv_results %>%
+  dplyr::summarise(
+    mean_rmse = mean(rmse),
+    mean_mae  = mean(mae)
+  )
+```
+
+Save to file.
+
+```{r}
+# save error metrics to csv file
+write.csv(cv_results, file = "C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma/cv_results.csv")
+```
+
+
+Plot the error metrics.
+
+```{r}
+ggplot(cv_results, aes(x = rmse)) +
+  geom_histogram(bins = 6, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of RMSE across 10 folds", x = "RMSE", y = "Count")
+
+ggplot(cv_results, aes(y = mae)) +
+  geom_boxplot(fill = "tomato", alpha = 0.6) +
+  labs(title = "Distribution of MAE across 10 folds", y = "MAE")
+```
+
+Fit model on all of the data.
+
+```{r}
+lm_sigma_final <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * NP_len
+                                   + head_synt_role_F
+                                   + (1|head_lemma)
+                                   + (1|author), 
+                                   data = data_sample_2)
+```
+
+Model summary.
+
+```{r}
+summary(lm_sigma_final)
+# write model summary to file
+output <- capture.output(summary(lm_sigma_final))
+cat("model_summary", output, file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma/model_summary.txt", sep="\n", append=TRUE)
+
+```
+
 
 
 ## Visualization
@@ -148,6 +304,23 @@ ggeffects::ggeffect(lm_sigma_1, c("NP_len")) %>%
 ggeffects::ggeffect(lm_sigma_1, c("head_synt_role_F")) %>%
   plot() +
   labs(x = "Head Syntactic Role",
+       y = "Predicted Uniform Information Density (sigma gamma)",
+       title = "")
+```
+
+Final Model
+
+```{r}
+# plot effect of time
+ggeffects::ggeffect(lm_sigma_final, c("year_c")) %>%
+  plot() +
+  labs(x = "Time",
+       y = "Predicted Uniform Information Density (sigma gamma)",
+       title = "")
+# plot effect of NP length
+ggeffects::ggeffect(lm_sigma_final, c("NP_len")) %>%
+  plot() +
+  labs(x = "Number of Constituents",
        y = "Predicted Uniform Information Density (sigma gamma)",
        title = "")
 ```

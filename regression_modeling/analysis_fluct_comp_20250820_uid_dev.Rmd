@@ -15,17 +15,18 @@ Mixed-effects (generalized) linear regression models for the UID measure UIDev (
 
 ## Set up
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 # libraries
 library(car)
 library(DHARMa)
 library(dplyr)
+library(future.apply)
 library(ggeffects)
 library(ggplot2)
 library(glmmTMB)
-library(lmerTest)
-library(lmeresampler)
+library(pbapply)
 library(performance)
+library(rsample)
 library(sjPlot)
 ```
 
@@ -80,8 +81,9 @@ levels(np_data$head_synt_role_F) # show factor levels
 contrasts(np_data$head_synt_role_F) = contr.treatment(3, base=1) # baseline=nsubj
 ```
 
+## Fit simple model
 
-## Sample data
+# Sample data
 
 Get stratified (by year) data sample.
 
@@ -93,7 +95,7 @@ data_sample <- np_data %>%
   ungroup()
 ```
 
-## Fit model with sampled data
+# Fit model with sampled data
 
 Model 1: Fit a simple generalized linear model model with interaction of year and NP length and random intercepts for head noun lemma and author.
 
@@ -154,6 +156,124 @@ DHARMa::plotResiduals(sim_lm_uid_dev_2, form = data_sample$year_c) # plot residu
 
 ## Cross-validation
 
+# Sample data
+
+Sample data for cross-validation (due to dataset being very large). Sample is stratified by year.
+
+```{r}
+set.seed(25)
+data_sample_2 <- np_data %>%
+  group_by(year) %>%  # stratify by year
+  sample_frac(0.01) %>%  # take 1% from each category
+  ungroup()
+```
+
+# Run Cross-Validation
+
+Prepare parallelization.
+
+```{r}
+# use all available cores except one
+future::plan(future::multisession, workers = parallel::detectCores() - 1)
+```
+
+Create 10 folds.
+
+```{r}
+set.seed(12)
+# create 10 folds
+folds <- rsample::vfold_cv(data_sample_2, v = 10)
+```
+
+Run cross-validation iteratively for each fold: Fit model with training data, then test with test data.
+
+```{r}
+results <- future.apply::future_lapply(
+  folds$splits,
+  function(split) {
+    # select train and test data
+    train <- rsample::analysis(split)
+    test  <- rsample::assessment(split)
+  
+    train$uid_dev_shift <- train$uid_dev + 0.0001 # small positive offset
+    test$uid_dev_shift <- test$uid_dev + 0.0001 # small positive offset
+    
+    # fit mixed-effects model
+    fit <- glmmTMB::glmmTMB(uid_dev_shift ~ year_c * NP_len
+                           + head_synt_role_F
+                           + (1|head_lemma)
+                           + (1|author),
+                           data = train,
+                           family=Gamma(link = "log"))
+  
+    # predict on test data
+    preds <- predict(fit, newdata = test, allow.new.levels = TRUE)
+  
+    # compute error metrics
+    # RMSE = Root Mean Squared Error
+    # MAE = Mean Absolute Error
+    dplyr::tibble(
+      rmse = sqrt(mean((test$uid_dev_shift - preds)^2)),
+      mae  = mean(abs(test$uid_dev_shift - preds))
+    )
+  },
+  future.seed = TRUE,
+  future.scheduling = 1,
+  future.packages = c("lmerTest", "rsample", "dplyr")
+)
+```
+
+Summarize the error metrics.
+
+```{r}
+cv_results <- dplyr::bind_rows(results)
+
+cv_results %>%
+  dplyr::summarise(
+    mean_rmse = mean(rmse),
+    mean_mae  = mean(mae)
+  )
+```
+
+Save to file.
+
+```{r}
+# save error metrics to csv file
+write.csv(cv_results, file = "C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_uid_dev/cv_results.csv")
+```
+
+
+Plot the error metrics.
+
+```{r}
+ggplot(cv_results, aes(x = rmse)) +
+  geom_histogram(bins = 6, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of RMSE across 10 folds", x = "RMSE", y = "Count")
+
+ggplot(cv_results, aes(y = mae)) +
+  geom_boxplot(fill = "tomato", alpha = 0.6) +
+  labs(title = "Distribution of MAE across 10 folds", y = "MAE")
+```
+
+Fit model on all of the data.
+
+```{r}
+lm_uid_dev_final <- glmmTMB::glmmTMB(uid_dev ~ year_c * NP_len
+                                     + head_synt_role_F
+                                     + (1|head_lemma)
+                                     + (1|author), 
+                                     data = data_sample_2,
+                                     family=Gamma(link = "log"))
+```
+Model summary.
+
+```{r}
+summary(lm_uid_dev_final)
+# write model summary to file
+output <- capture.output(summary(lm_uid_dev_final))
+cat("model_summary", output, file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_uid_dev/model_summary.txt", sep="\n", append=TRUE)
+```
+
 
 ## Visualization
 
@@ -206,6 +326,23 @@ ggeffects::ggeffect(lm_uid_dev_2, c("head_synt_role_F")) %>%
   plot() +
   labs(x = "Head Syntactic Role",
        y = "Predicted Uniform Information Density (sigma gamma)",
+       title = "")
+```
+
+Final Model.
+
+```{r}
+# plot effect of time
+ggeffects::ggeffect(lm_uid_dev_final, c("year_c")) %>%
+  plot() +
+  labs(x = "Time",
+       y = "Predicted Uniform Information Density (uid_dev)",
+       title = "")
+# plot effect of NP length
+ggeffects::ggeffect(lm_uid_dev_final, c("NP_len")) %>%
+  plot() +
+  labs(x = "Number of Constituents",
+       y = "Predicted Uniform Information Density (uid_dev)",
        title = "")
 ```
 
