@@ -62,10 +62,19 @@ np_data <- data %>%
 
 Transform variables:
 - center year variable
+- center NP length
+- center sum of surprisals
+- center average surprisal
 
 ```{r}
 # transform year variable
 np_data$year_c <- scale(np_data$year, center=T, scale=F)
+# transform NP length variable
+np_data$NP_len_c <- scale(np_data$NP_len, center=T, scale=F)
+# transform sum of surprisals variable
+np_data$sum_srp_c <- scale(np_data$sum_srp, center=T, scale=F)
+# transform average surprisal variable
+np_data$avg_srp_c <- scale(np_data$avg_srp, center=T, scale=F)
 ```
 
 Apply contrast coding:
@@ -104,7 +113,7 @@ Model 1: Fit model with
 
 ```{r}
 # model 1: model with interaction and random intercepts
-lm_sigma_1 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len
+lm_sigma_1 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len_c
                            + head_synt_role_F
                            + (1|head_lemma)
                            + (1|author),
@@ -136,7 +145,7 @@ Note: Random slopes for NP length and year by lemma led to singular fit.
 
 ```{r}
 # model 2: model with interaction and random intercepts
-lm_sigma_2 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len
+lm_sigma_2 <- lmerTest::lmer(sigma_gamma ~ year_c * NP_len_c
                            + head_synt_role_F
                            + (1+head_synt_role_F|head_lemma)
                            + (1|author),
@@ -168,7 +177,7 @@ Model 3: Fit model with
 
 ```{r}
 lm_sigma_3 <- lmerTest::lmer(sigma_gamma ~ year_c
-                             + NP_len * sum_srp
+                             + NP_len_c * sum_srp_c
                              + head_synt_role_F
                              + (1|head_lemma)
                              + (1|author),
@@ -192,6 +201,151 @@ sim_lm_sigma_3 <- DHARMa::simulateResiduals(lm_sigma_3)
 DHARMa::plotQQunif(sim_lm_sigma_3) # create qq-plot
 DHARMa::plotResiduals(sim_lm_sigma_3) # plot residuals against expected value
 DHARMa::plotResiduals(sim_lm_sigma_3, form = data_sample_1$year_c) # plot residuals against predictor
+```
+
+Model 4: Fit model with
+- interaction of year and sum of surprisals
+- head syntactic role has control variable
+- random intercepts for head lemma and author
+
+```{r}
+lm_sigma_4 <- lmerTest::lmer(sigma_gamma ~ year_c * sum_srp_c
+                             + head_synt_role_F
+                             + (1|head_lemma)
+                             + (1|author),
+                             data = data_sample_1)
+```
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_sigma_4)
+# random effects variance
+VarCorr(lm_sigma_4)
+# Variance Inflation Factor (collinearity)
+car::vif(lm_sigma_4)
+```
+
+Check residuals.
+
+```{r}
+# check residuals
+sim_lm_sigma_4 <- DHARMa::simulateResiduals(lm_sigma_4)
+DHARMa::plotQQunif(sim_lm_sigma_4) # create qq-plot
+DHARMa::plotResiduals(sim_lm_sigma_4) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_sigma_4, form = data_sample_1$year_c) # plot residuals against predictor
+```
+
+Model 5: Fit model with
+- interaction of year and sum of surprisals
+- head syntactic role has control variable
+- random intercepts for head lemma and author
+- random slope for head syntactic role on head lemma
+
+Note: This model sometimes has convergence issues.
+
+```{r}
+lm_sigma_5 <- lmerTest::lmer(sigma_gamma ~ year_c * sum_srp_c
+                             + head_synt_role_F
+                             + (1+head_synt_role_F|head_lemma)
+                             + (1|author),
+                             data = data_sample_1)
+```
+
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_sigma_5)
+# random effects variance
+VarCorr(lm_sigma_5)
+# Variance Inflation Factor (collinearity)
+car::vif(lm_sigma_5)
+```
+
+Check residuals.
+
+```{r}
+# check residuals
+sim_lm_sigma_5 <- DHARMa::simulateResiduals(lm_sigma_5)
+DHARMa::plotQQunif(sim_lm_sigma_5) # create qq-plot
+DHARMa::plotResiduals(sim_lm_sigma_5) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_sigma_5, form = data_sample_1$year_c) # plot residuals against predictor
+```
+
+Model 6: Fit model with
+- predictor year
+- interaction of average surprisal and number of constituents
+- head syntactic role has control variable
+- random intercepts for head lemma and author
+
+```{r}
+lm_sigma_6 <- lmerTest::lmer(sigma_gamma ~ year_c
+                             + avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1|head_lemma)
+                             + (1|author),
+                             data = data_sample_1)
+```
+
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_sigma_6)
+# random effects variance
+VarCorr(lm_sigma_6)
+# Variance Inflation Factor (collinearity)
+car::vif(lm_sigma_6)
+```
+
+Check residuals.
+
+```{r}
+# check residuals
+sim_lm_sigma_6 <- DHARMa::simulateResiduals(lm_sigma_6)
+DHARMa::plotQQunif(sim_lm_sigma_6) # create qq-plot
+DHARMa::plotResiduals(sim_lm_sigma_6) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_sigma_6, form = data_sample_1$year_c) # plot residuals against predictor
+```
+
+Model 7: Fit model with
+- predictor year
+- interaction of average surprisal and number of constituents
+- head syntactic role has control variable
+- random intercepts for head lemma and author
+- random slope for head syntactic role on head lemma
+
+Note: Model has convergence issues.
+
+```{r}
+lm_sigma_7 <- lmerTest::lmer(sigma_gamma ~ year_c
+                             + avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1+head_synt_role_F|head_lemma)
+                             + (1|author),
+                             data = data_sample_1)
+```
+
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_sigma_7)
+# random effects variance
+VarCorr(lm_sigma_7)
+# Variance Inflation Factor (collinearity)
+car::vif(lm_sigma_7)
+```
+
+Check residuals.
+
+```{r}
+# check residuals
+sim_lm_sigma_7 <- DHARMa::simulateResiduals(lm_sigma_7)
+DHARMa::plotQQunif(sim_lm_sigma_7) # create qq-plot
+DHARMa::plotResiduals(sim_lm_sigma_7) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_sigma_7, form = data_sample_1$year_c) # plot residuals against predictor
 ```
 
 
@@ -238,7 +392,7 @@ results <- future.apply::future_lapply(
   
     # fit mixed-effects model
     fit <- glmmTMB::glmmTMB(sigma_gamma ~ year_c
-                             + NP_len * sum_srp
+                             + avg_srp_c * NP_len_c
                              + head_synt_role_F
                              + (1|head_lemma)
                              + (1|author),
@@ -297,11 +451,11 @@ Fit model on all of the data.
 
 ```{r}
 lm_sigma_final <- glmmTMB::glmmTMB(sigma_gamma ~ year_c
-                                    + NP_len * sum_srp
-                                    + head_synt_role_F
-                                    + (1|head_lemma)
-                                    + (1|author), 
-                                   data = data_sample_2)
+                             + avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1|head_lemma)
+                             + (1|author), 
+                             data = data_sample_2)
 ```
 
 Model summary.
@@ -346,17 +500,32 @@ ggeffects::ggeffect(lm_sigma_1, c("head_synt_role_F")) %>%
 Final Model
 
 ```{r}
+# function to center a concrete variable value
+center_value <- function(data,column,x){
+  mean_value = mean(data[[column]])
+  (x - mean_value)
+}
+# calculate centered NP length values
+center_value(data_sample_2,"NP_len",3)
+center_value(data_sample_2,"NP_len",7)
+center_value(data_sample_2,"NP_len",15)
+```
+
+
+```{r}
 # plot effect of time
 ggeffects::ggeffect(lm_sigma_final, c("year_c")) %>%
   plot() +
-  labs(x = "Time",
-       y = "Predicted Uniform Information Density (sigma gamma)",
+  labs(x = "Time (centered)",
+       y = "Predicted IFC",
        title = "")
 # plot effect of NP length and sum of surprisal
-ggeffects::ggeffect(lm_sigma_final, c("NP_len", "sum_srp")) %>%
+ggeffects::ggeffect(lm_sigma_final, c("avg_srp_c", "NP_len_c[-5.424059,-1.424059,6.575941]")) %>%
   plot() +
-  labs(x = "Number of Constituents",
-       y = "Predicted Uniform Information Density (sigma gamma)",
-       title = "")
+  labs(x = "Average Surprisal (centered)",
+       y = "Predicted IFC",
+       title = "",
+       color = "Const. Number") +
+  scale_color_hue(labels = c("3", "7", "15"))
 ```
 

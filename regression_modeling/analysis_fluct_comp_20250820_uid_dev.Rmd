@@ -62,10 +62,16 @@ np_data <- data %>%
 
 Transform variables:
 - center year variable
+- center NP length
+- center average surprisal
 
 ```{r}
 # transform year variable
 np_data$year_c <- scale(np_data$year, center=T, scale=F)
+# transform NP length variable
+np_data$NP_len_c <- scale(np_data$NP_len, center=T, scale=F)
+# transform average surprisal variable
+np_data$avg_srp_c <- scale(np_data$avg_srp, center=T, scale=F)
 ```
 
 Apply contrast coding:
@@ -153,6 +159,42 @@ DHARMa::plotResiduals(sim_lm_uid_dev_2) # plot residuals against expected value
 DHARMa::plotResiduals(sim_lm_uid_dev_2, form = data_sample$year_c) # plot residuals against predictor
 ```
 
+Model 3: Fit model with
+- predictor year
+- interaction of average surprisal and number of constituents
+- head syntactic role has control variable
+- random intercepts for head lemma and author
+
+```{r}
+lm_uid_dev_3 <- glmmTMB::glmmTMB(uid_dev ~ year_c
+                             + avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1|head_lemma)
+                             + (1|author),
+                           family=Gamma(link = "log"),
+                           data = data_sample)
+```
+
+Perform model diagnostics.
+
+```{r}
+# AIC
+AIC(lm_uid_dev_3)
+# random effects variance
+VarCorr(lm_uid_dev_3)
+# Variance Inflation Factor (collinearity)
+performance::check_collinearity(lm_uid_dev_3)
+```
+Check residuals.
+
+```{r}
+# check residuals
+sim_lm_uid_dev_3 <- DHARMa::simulateResiduals(lm_uid_dev_3)
+DHARMa::plotQQunif(sim_lm_uid_dev_3) # create qq-plot
+DHARMa::plotResiduals(sim_lm_uid_dev_3) # plot residuals against expected value
+DHARMa::plotResiduals(sim_lm_uid_dev_3, form = data_sample$year_c) # plot residuals against predictor
+```
+
 
 ## Cross-validation
 
@@ -195,16 +237,17 @@ results <- future.apply::future_lapply(
     train <- rsample::analysis(split)
     test  <- rsample::assessment(split)
   
-    train$uid_dev_shift <- train$uid_dev + 0.0001 # small positive offset
-    test$uid_dev_shift <- test$uid_dev + 0.0001 # small positive offset
+    #train$uid_dev_shift <- train$uid_dev + 0.0001 # small positive offset
+    #test$uid_dev_shift <- test$uid_dev + 0.0001 # small positive offset
     
     # fit mixed-effects model
-    fit <- glmmTMB::glmmTMB(uid_dev_shift ~ year_c * NP_len
-                           + head_synt_role_F
-                           + (1|head_lemma)
-                           + (1|author),
-                           data = train,
-                           family=Gamma(link = "log"))
+    fit <- glmmTMB::glmmTMB(uid_dev ~ year_c
+                             + avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1|head_lemma)
+                             + (1|author),
+                           family=Gamma(link = "log"),
+                           data = train)
   
     # predict on test data
     preds <- predict(fit, newdata = test, allow.new.levels = TRUE)
@@ -213,8 +256,8 @@ results <- future.apply::future_lapply(
     # RMSE = Root Mean Squared Error
     # MAE = Mean Absolute Error
     dplyr::tibble(
-      rmse = sqrt(mean((test$uid_dev_shift - preds)^2)),
-      mae  = mean(abs(test$uid_dev_shift - preds))
+      rmse = sqrt(mean((test$uid_dev - preds)^2)),
+      mae  = mean(abs(test$uid_dev - preds))
     )
   },
   future.seed = TRUE,
@@ -258,12 +301,13 @@ ggplot(cv_results, aes(y = mae)) +
 Fit model on all of the data.
 
 ```{r}
-lm_uid_dev_final <- glmmTMB::glmmTMB(uid_dev ~ year_c * NP_len
-                                     + head_synt_role_F
-                                     + (1|head_lemma)
-                                     + (1|author), 
-                                     data = data_sample_2,
-                                     family=Gamma(link = "log"))
+lm_uid_dev_final <- glmmTMB::glmmTMB(uid_dev ~ year_c
+                             + avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1|head_lemma)
+                             + (1|author),
+                           family=Gamma(link = "log"),
+                           data=data_sample_2)
 ```
 Model summary.
 
@@ -302,11 +346,6 @@ ggeffects::ggeffect(lm_sigma_1, c("head_synt_role_F")) %>%
        title = "")
 ```
 
-## Visualization
-
-Visualize the results of the models.
-
-Model 2
 
 ```{r}
 # plot effect of time
@@ -332,17 +371,32 @@ ggeffects::ggeffect(lm_uid_dev_2, c("head_synt_role_F")) %>%
 Final Model.
 
 ```{r}
+# function to center a concrete variable value
+center_value <- function(data,column,x){
+  mean_value = mean(data[[column]])
+  (x - mean_value)
+}
+# calculate centered NP length values
+center_value(data_sample_2,"NP_len",3)
+center_value(data_sample_2,"NP_len",7)
+center_value(data_sample_2,"NP_len",15)
+```
+
+
+```{r}
 # plot effect of time
 ggeffects::ggeffect(lm_uid_dev_final, c("year_c")) %>%
   plot() +
-  labs(x = "Time",
-       y = "Predicted Uniform Information Density (uid_dev)",
+  labs(x = "Time (centered)",
+       y = "Predicted UIDev",
        title = "")
 # plot effect of NP length
-ggeffects::ggeffect(lm_uid_dev_final, c("NP_len")) %>%
+ggeffects::ggeffect(lm_uid_dev_final, c("avg_srp_c", "NP_len_c[-5.424059,-1.424059,6.575941]")) %>%
   plot() +
-  labs(x = "Number of Constituents",
-       y = "Predicted Uniform Information Density (uid_dev)",
-       title = "")
+  labs(x = "Average Surprisal (centered)",
+       y = "Predicted UIDev",
+       title = "",
+       color = "Const. Number") +
+  scale_color_hue(labels = c("3", "7", "15"))
 ```
 
