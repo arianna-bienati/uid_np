@@ -17,21 +17,16 @@ Generalized additive regression models for the UID measure Information Fluctuati
 
 ```{r, warning=FALSE, message=FALSE}
 # libraries
-library(car)
 library(DHARMa)
 library(dplyr)
-library(ggeffects)
-library(ggplot2)
 library(mgcv)
-library(performance)
-library(sjPlot)
 ```
 
 ## Load data
 
 ```{r}
 # open data file
-data <- read.table(file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_20250731.csv",
+data <- read.table(file="./data/NP_data_20250731.csv",
                    sep=",",
                    header=TRUE,
                    quote='"',
@@ -117,13 +112,13 @@ gam_sigma_1 <- mgcv::bam(sigma_gamma ~ s(year_c)
 Save model.
 
 ```{r}
-saveRDS(gam_sigma_1, "C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma_gam/gam_sigma_1.rds")
+saveRDS(gam_sigma_1, "./results/20250820_sigma_gam/gam_sigma_1.rds")
 ```
 
 Load model.
 
 ```{r}
-gam_sigma_1 <- readRDS("C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma_gam/gam_sigma_1.rds")
+gam_sigma_1 <- readRDS("./results/20250820_sigma_gam/gam_sigma_1.rds")
 ```
 
 Model summary.
@@ -132,7 +127,7 @@ Model summary.
 summary(gam_sigma_1)
 # write model summary to file
 output <- capture.output(summary(gam_sigma_1))
-cat("model_summary", output, file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma_gam/model_summary.txt", sep="\n", append=TRUE)
+cat("model_summary", output, file="./results/20250820_sigma_gam/model_summary.txt", sep="\n", append=TRUE)
 ```
 
 ## Visualization

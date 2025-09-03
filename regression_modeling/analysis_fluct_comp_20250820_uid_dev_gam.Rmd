@@ -17,21 +17,15 @@ Generalized additive regression models for the UID measure UIDev (average of sur
 
 ```{r, warning=FALSE, message=FALSE}
 # libraries
-library(car)
-library(DHARMa)
 library(dplyr)
-library(ggeffects)
-library(ggplot2)
 library(mgcv)
-library(performance)
-library(sjPlot)
 ```
 
 ## Load data
 
 ```{r}
 # open data file
-data <- read.table(file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_20250731.csv",
+data <- read.table(file="./data/NP_data_20250731.csv",
                    sep=",",
                    header=TRUE,
                    quote='"',
@@ -116,6 +110,6 @@ Model summary.
 summary(gam_sigma_1)
 # write model summary to file
 output <- capture.output(summary(gam_sigma_1))
-cat("model_summary", output, file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_uid_dev_gam/model_summary.txt", sep="\n", append=TRUE)
+cat("model_summary", output, file="./results/20250820_uid_dev_gam/model_summary.txt", sep="\n", append=TRUE)
 ```
 
