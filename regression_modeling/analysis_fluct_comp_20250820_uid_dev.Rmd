@@ -24,10 +24,8 @@ library(future.apply)
 library(ggeffects)
 library(ggplot2)
 library(glmmTMB)
-library(pbapply)
 library(performance)
 library(rsample)
-library(sjPlot)
 ```
 
 ## Load data
