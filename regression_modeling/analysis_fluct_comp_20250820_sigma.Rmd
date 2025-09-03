@@ -32,7 +32,7 @@ library(rsample)
 
 ```{r}
 # open data file
-data <- read.table(file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_20250731_sum.csv",
+data <- read.table(file="./data/NP_data_20250731.csv",
                    sep=",",
                    header=TRUE,
                    quote='"',
@@ -429,7 +429,7 @@ Save to file.
 
 ```{r}
 # save error metrics to csv file
-write.csv(cv_results, file = "C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma/cv_results.csv")
+write.csv(cv_results, file = "./results/20250820_sigma/cv_results.csv")
 ```
 
 
@@ -462,7 +462,7 @@ Model summary.
 summary(lm_sigma_final)
 # write model summary to file
 output <- capture.output(summary(lm_sigma_final))
-cat("model_summary", output, file="C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/results/20250820_sigma/model_summary.txt", sep="\n", append=TRUE)
+cat("model_summary", output, file="./results/20250820_sigma/model_summary.txt", sep="\n", append=TRUE)
 
 ```
 
