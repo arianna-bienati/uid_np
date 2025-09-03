@@ -130,13 +130,3 @@ output <- capture.output(summary(gam_sigma_1))
 cat("model_summary", output, file="./results/20250820_sigma_gam/model_summary.txt", sep="\n", append=TRUE)
 ```
 
-## Visualization
-
-Visualize the results of the models.
-
-Model 1
-
-```{r}
-
-```
-
