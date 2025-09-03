@@ -376,10 +376,16 @@ center_value <- function(data,column,x){
   mean_value = mean(data[[column]])
   (x - mean_value)
 }
+
 # calculate centered NP length values
 center_value(data_sample_2,"NP_len",3)
 center_value(data_sample_2,"NP_len",7)
 center_value(data_sample_2,"NP_len",15)
+
+# calculate centered average surprisal values
+center_value(data_sample_2,"avg_srp",7.5)
+center_value(data_sample_2,"avg_srp",10)
+center_value(data_sample_2,"avg_srp",12.5)
 ```
 
 
@@ -390,7 +396,8 @@ ggeffects::ggeffect(lm_uid_dev_final, c("year_c")) %>%
   labs(x = "Time (centered)",
        y = "Predicted UIDev",
        title = "")
-# plot effect of NP length
+
+# plot effect of NP length (version 1)
 ggeffects::ggeffect(lm_uid_dev_final, c("avg_srp_c", "NP_len_c[-5.424059,-1.424059,6.575941]")) %>%
   plot() +
   labs(x = "Average Surprisal (centered)",
@@ -398,5 +405,16 @@ ggeffects::ggeffect(lm_uid_dev_final, c("avg_srp_c", "NP_len_c[-5.424059,-1.4240
        title = "",
        color = "Const. Number") +
   scale_color_hue(labels = c("3", "7", "15"))
+
+# plot effect of NP length (version 2)
+ggeffects::ggeffect(lm_uid_dev_final, c("NP_len_c", "avg_srp_c[0.3173475,2.817347,5.317347]")) %>%
+  plot() +
+  labs(x = "NP Length (centered)",
+       y = "Predicted UIDev",
+       title = "",
+       color = "Avg. Surprisal") +
+  scale_x_continuous(limits=c(0,20)) +
+  scale_y_continuous(limits=c(0,30)) +
+  scale_color_hue(labels = c("7.5", "10", "12.5"))
 ```
 
