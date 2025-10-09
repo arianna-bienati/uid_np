@@ -8,7 +8,7 @@ script to get relevant sentences from corpus files and write info to csv
 - extract sentences from each document
 - calculate Information Fluctuation Complexity based on surprisal annotation
 - extract metadata: text ID, author, year, journal, primary topic
-- version which includes the sentence content in the output file
+- version which doesn't the sentence content in the output file (relevant parts are commented out)
 
 """
 
@@ -97,9 +97,9 @@ def parse_sentences(file_path):
                             "year": text_year,
                             "journal": text_jrnl,
                             "sent_id": sent_id,
-                            "sentence": sent, 
+                            #"sentence": sent, 
                             "sent_len": len(sent),
-                            "sent_str": ' '.join(token[0] for token in sent),
+                            #"sent_str": ' '.join(token[0] for token in sent),
                             "avg_srp": avg_srp,
                             "uid_dev": uid_dev,
                             "sigma_gamma": sigma_gamma
@@ -120,7 +120,7 @@ def save_to_csv(sents_in_file, output_file):
     with open(output_file, 'a', newline = '', encoding = 'utf-8') as csv_file:
         # define csv header
         header = ['text_id', 'author', 'year', 'journal', 
-                  'sent_id', 'sent_len', 'sent_str',
+                  'sent_id', 'sent_len',
                   'avg_srp', 'uid_dev', 'sigma_gamma']
         writer = csv.DictWriter(csv_file, fieldnames = header)
         
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
     
     #output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test/test_sentence_data.csv'
-    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/sentence_data.csv'
+    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/sentence_data_no_content.csv'
     
     # process corpus files
     process_corpus_files(data_folder, output_file)
