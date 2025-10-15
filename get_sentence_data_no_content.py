@@ -74,6 +74,7 @@ def parse_sentences(file_path):
                         # get surprisal values of all tokens
                         srp_values = [float(tok[-1]) for tok in sent]
                         avg_srp = sum(srp_values) / len(srp_values)
+                        sum_srp = sum(srp_values)
 
                         if len(srp_values) < 3:
                             uid_dev = np.nan
@@ -101,6 +102,7 @@ def parse_sentences(file_path):
                             "sent_len": len(sent),
                             #"sent_str": ' '.join(token[0] for token in sent),
                             "avg_srp": avg_srp,
+                            "sum_srp": sum_srp,
                             "uid_dev": uid_dev,
                             "sigma_gamma": sigma_gamma
                             })
@@ -121,7 +123,7 @@ def save_to_csv(sents_in_file, output_file):
         # define csv header
         header = ['text_id', 'author', 'year', 'journal', 
                   'sent_id', 'sent_len',
-                  'avg_srp', 'uid_dev', 'sigma_gamma']
+                  'avg_srp', 'sum_srp', 'uid_dev', 'sigma_gamma']
         writer = csv.DictWriter(csv_file, fieldnames = header)
         
         # add header if output file is empty
