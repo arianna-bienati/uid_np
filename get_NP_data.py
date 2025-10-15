@@ -108,6 +108,7 @@ def parse_sentences(file_path):
                                 # get surprisal values of all tokens
                                 srp_values = [float(tok[-1]) for tok in NP]
                                 avg_srp = sum(srp_values) / len(srp_values)
+                                sum_srp = sum(srp_values)
 
                                 if len(srp_values) < 3:
                                     uid_dev = np.nan
@@ -134,9 +135,11 @@ def parse_sentences(file_path):
                                     "NP": NP, 
                                     "NP_len": len(NP),
                                     "NP_str": ' '.join(token[0] for token in NP),
+                                    "NP_pos": '_'.join(token[2] for token in NP),
                                     "head_lemma": head_lemma,
                                     "head_synt_role": head_synt_role,
                                     "avg_srp": avg_srp,
+                                    "sum_srp": sum_srp,
                                     "uid_dev": uid_dev,
                                     "sigma_gamma": sigma_gamma
                                     })
@@ -157,8 +160,8 @@ def save_to_csv(NPs_in_file, output_file):
     with open(output_file, 'a', newline = '', encoding = 'utf-8') as csv_file:
         # define csv header
         header = ['text_id', 'author', 'year', 'journal', 
-                  'NP', 'NP_len', 'NP_str', 'head_lemma', 'head_synt_role',
-                  'avg_srp', 'uid_dev', 'sigma_gamma']
+                  'NP', 'NP_len', 'NP_str', 'NP_pos', 'head_lemma', 'head_synt_role',
+                  'avg_srp', 'sum_srp', 'uid_dev', 'sigma_gamma']
         writer = csv.DictWriter(csv_file, fieldnames = header)
         
         # add header if output file is empty
