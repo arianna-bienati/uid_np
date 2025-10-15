@@ -31,6 +31,7 @@ def parse_sentences(file_path):
     
     # initialize list for current document
     doc = []
+    lemmas = set()
     
     #sentences = [] # list of sentences
     current_sentence = [] # current sentence: list of tokens
@@ -72,6 +73,7 @@ def parse_sentences(file_path):
                         token = [current_sentence[idx][0],  # word
                                      current_sentence[idx][-4]] # s50
                         doc.append(token) # add to list of document
+                        lemmas.add(current_sentence[idx][1])
                     #print(sent)
          
             # while in the sentence
@@ -112,7 +114,7 @@ def parse_sentences(file_path):
             "sigma_gamma": sigma_gamma
             })
 
-    return file_info
+    return file_info, text_year, lemmas
 
 
 # function to add document data to csv file
@@ -136,6 +138,7 @@ def save_to_csv(sents_in_file, output_file):
     
 # function to process corpus files
 def process_corpus_files(data_folder, output_file):    
+    vocab_per_year = {}
     # go through each file in corpus data folder
     for file in os.listdir(data_folder):
         
@@ -148,13 +151,21 @@ def process_corpus_files(data_folder, output_file):
             file_path = os.path.join(data_folder, file)
             
             # open corpus file, extract sentences
-            sents_in_file = parse_sentences(file_path)
+            sents_in_file, year, lemmas = parse_sentences(file_path)
+
+            if year not in vocab_per_year:
+                vocab_per_year[year] = set()
+            vocab_per_year[year].update(lemmas)
             
             # add NP data to output csv file
             save_to_csv(sents_in_file, output_file)
             print(f'Added sentences to output file: {output_file}')
         
-        
+    vocab_output = output_file.replace('.csv', '_vocab_per_year.csv')
+    with open(vocab_output, 'w') as f:
+        f.write('year,vocab_size\n')
+        for year in sorted(vocab_per_year.keys()):
+            f.write(f'{year},{len(vocab_per_year[year])}\n')
         
 # main function
 if __name__ == "__main__":
