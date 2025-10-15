@@ -174,11 +174,13 @@ if __name__ == "__main__":
    
 
     #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test'
-    data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
-    
+    #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
+    data_folder = sys.argv[1]
+
     # output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test/test_document_data.csv'
-    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/document_data.csv'
-    
+    #output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/document_data.csv'
+    output_file = sys.argv[2]
+
     # process corpus files
     process_corpus_files(data_folder, output_file)
         

@@ -15,6 +15,7 @@ script to get relevant sentences from corpus files and write info to csv
 import os
 import re
 import csv
+import sys
 
 import numpy as np
 
@@ -163,11 +164,13 @@ if __name__ == "__main__":
    
 
     #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test'
-    data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
-    
+    #data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
+    data_folder = sys.argv[1]
+
     #output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test/test_sentence_data.csv'
-    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/sentence_data.csv'
-    
+    #output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/sentence_data.csv'
+    output_file = sys.argv[2]
+
     # process corpus files
     process_corpus_files(data_folder, output_file)
         

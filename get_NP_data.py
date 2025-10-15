@@ -201,15 +201,15 @@ if __name__ == "__main__":
    
     # data folder
     # data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/rsc_v604_udpipe_srp_202410'
-    #data_folder = sys.argv[1]
+    data_folder = sys.argv[1]
     # data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test'
-    data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
+    # data_folder = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/data/rsc_dep_gs_603_202412.vrt/files'
     
     # output file
     # output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/LMM/analysis_20241018/data/NP_data.csv'
-    #output_file = sys.argv[2]
+    output_file = sys.argv[2]
     # output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/test/test_v3.csv'
-    output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_v1.csv'
+    #output_file = 'C:/Users/isabell/Documents/UdS/Corpus_Analysis/RSC/fluctuation_complexity/data/NP_data_v1.csv'
     
     # process corpus files
     process_corpus_files(data_folder, output_file)
