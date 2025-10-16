@@ -88,6 +88,8 @@ def parse_sentences(file_path):
         avg_srp = sum(srp_values) / len(srp_values)
         sum_srp = sum(srp_values)
 
+        vocab_size = len(lemmas)
+
         if len(srp_values) < 3:
             uid_dev = np.nan
             sigma_gamma = np.nan
@@ -100,8 +102,7 @@ def parse_sentences(file_path):
             uid_dev = np.mean(np.abs(diffs))
 
             # this implementation should be faithful to information fluctuation complexity applied to texts, as it appeared in Brasolin, Bienati (2025)
-            sigma_gamma = np.sqrt(np.mean((diffs - np.mean(diffs))**2))
-            
+            sigma_gamma = np.sqrt(np.mean((diffs - np.mean(diffs))**2))   
 
         # add document data to list of all document data
         file_info.append({
@@ -110,6 +111,7 @@ def parse_sentences(file_path):
             "year": text_year,
             "journal": text_jrnl, 
             "doc_len": len(doc),
+            "vocab_size": vocab_size,
             "avg_srp": avg_srp,
             "sum_srp": sum_srp,
             "uid_dev": uid_dev,
@@ -125,7 +127,7 @@ def save_to_csv(sents_in_file, output_file):
     with open(output_file, 'a', newline = '', encoding = 'utf-8') as csv_file:
         # define csv header
         header = ['text_id', 'author', 'year', 'journal', 
-                  'doc_len',
+                  'doc_len', 'vocab_size',
                   'avg_srp', 'sum_srp', 'uid_dev', 'sigma_gamma']
         writer = csv.DictWriter(csv_file, fieldnames = header)
         
