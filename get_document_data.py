@@ -96,9 +96,10 @@ def parse_sentences(file_path):
         else:
             diffs = np.diff(srp_values)
 
-            # this implementation matches conceptually line 369-378 of postprocess_eval_results.py in https://github.com/thomashikaru/word-order-uid/tree/tacl-share/evaluation
+            # this implementation matches line 369-378 of postprocess_eval_results.py in https://github.com/thomashikaru/word-order-uid/tree/tacl-share/evaluation
             # this implementation matches conceptually also the function in revisiting-uid.ipynb at https://github.com/rycolab/revisiting-uid/tree/main/src
-            # and should be faithful to Collins' (2014) UIDev proposal
+            # and it is faithful to Collins' (2014) UIDev proposal
+            # see tests.py for the testing of different code implementations
             uid_dev = np.mean(np.abs(diffs))
 
             # this implementation should be faithful to information fluctuation complexity applied to texts, as it appeared in Brasolin, Bienati (2025)
