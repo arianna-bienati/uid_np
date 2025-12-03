@@ -14,6 +14,7 @@
 # libraries
 library(dplyr)
 library(effects,lib.loc="/scratch/landwehr/R/4.5")
+library(estimability,lib.loc="/scratch/landwehr/R/4.5")
 library(future,lib.loc="/scratch/landwehr/R/4.5")
 library(ggeffects,lib.loc="/scratch/landwehr/R/4.5")
 library(ggplot2)
