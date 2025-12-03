@@ -158,6 +158,9 @@ dev.off()
 
 ### CROSS-VALIDATION ###
 
+my_lib <- "/scratch/landwehr/R/4.5"
+default_libs <- .libPaths()
+
 # use all available cores except one
 future::plan(future::multisession, workers = parallel::detectCores() - 1)
 
