@@ -24,8 +24,8 @@ library(rsample,lib.loc="/scratch/landwehr/R/4.5")
 ### FIRST STEPS ###
 
 # open data file
-data <- read.table(file="test/test_sent.csv",
-                   #data <- read.table(file="NP_data.csv",
+#data <- read.table(file="test/test_sent.csv",
+data <- read.table(file="sentence_data_no_content.csv",
                    sep=",",
                    header=TRUE,
                    quote='"',
@@ -43,7 +43,7 @@ sent_data <- data %>%
   filter(!is.na(sigma_gamma)) # remove observations without sigma_gamma value
 
 # sample
-set.seed(734)
+set.seed(155)
 sent_data <- sent_data %>%
   group_by(year) %>%  # stratify by year
   sample_frac(0.5) %>%  # take 50 % from each category
@@ -59,9 +59,6 @@ sent_data$avg_srp_c <- scale(sent_data$avg_srp, center=T, scale=F)
 # transform journal to factor
 sent_data$journal_F <- as.factor(sent_data$journal)
 levels(sent_data$journal_F) # show factor levels
-
-# apply contrast coding
-contrasts(sent_data$journal_F) = contr.sum(2) # sum coding
 
 # redirect output to file
 sink("sigma_sent_output.txt", append=T)
@@ -86,11 +83,9 @@ sink()
 ### REGRESSION MODEL ###
 
 # regression model
-lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ year_c
-                             + journal_F
-                             + sent_len_c
-                             + avg_srp_c
-                             + (1|author),
+lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * avg_srp_c * sent_len_c
+                             + (1|author)
+                             + (1+sent_len_c|journal),
                              data=sent_data)
 summary(lm_sigma)
 # write model summary to file
@@ -125,21 +120,20 @@ dev.off()
 
 # plot model effects
 
+# effect of year * average surprisal * sentence length
+pdf("sigma_sent_effect_year_avgSrp_sentLen.pdf")
+ggeffects::ggeffect(lm_sigma, c("year_c", "avg_srp_c", "sent_len_c")) %>%
+  plot() +
+  labs(x = "Year, Average Surprisal and Sentence Length",
+       y = "IFC",
+       title = "")
+
 # effect of year
 pdf("sigma_sent_effect_year.pdf")
 ggeffects::ggeffect(lm_sigma, c("year_c")) %>%
   plot() +
   labs(x = "Year",
-       y = "Sigma",
-       title = "")
-dev.off()
-
-# effect of journal
-pdf("sigma_sent_effect_journal.pdf")
-ggeffects::ggeffect(lm_sigma, c("journal_F")) %>%
-  plot() +
-  labs(x = "Journal",
-       y = "Sigma",
+       y = "IFC",
        title = "")
 dev.off()
 
@@ -148,7 +142,7 @@ pdf("sigma_sent_effect_sentLen.pdf")
 ggeffects::ggeffect(lm_sigma, c("sent_len_c")) %>%
   plot() +
   labs(x = "Sentence Length",
-       y = "Sigma",
+       y = "IFC",
        title = "")
 dev.off()
 
@@ -157,7 +151,7 @@ pdf("sigma_sent_effect_avgSrp.pdf")
 ggeffects::ggeffect(lm_sigma, c("avg_srp_c")) %>%
   plot() +
   labs(x = "Average Surprisal",
-       y = "Sigma",
+       y = "IFC",
        title = "")
 dev.off()
 
@@ -178,11 +172,9 @@ results <- future.apply::future_lapply(
     test  <- rsample::assessment(split)
     
     # fit mixed-effects model
-    fit <- glmmTMB::glmmTMB(sigma_gamma ~ year_c
-                            + journal_F
-                            + sent_len_c
-                            + avg_srp_c
-                            + (1|author),
+    fit <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * avg_srp_c * sent_len_c
+                            + (1|author)
+                            + (1+sent_len_c|journal),
                             data=sent_data)
     
     # predict on test data

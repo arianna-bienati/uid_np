@@ -44,7 +44,7 @@ np_data <- data %>%
   filter(!is.na(sigma_gamma)) # remove observations without sigma_gamma value
 
 # sample
-set.seed(734)
+set.seed(155)
 np_data <- np_data %>%
   group_by(year) %>%  # stratify by year
   sample_frac(0.5) %>%  # take 50 % from each category
@@ -87,12 +87,12 @@ sink()
 ### REGRESSION MODEL ###
 
 # regression model
-lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ year_c
-                               + avg_srp_c * NP_len_c
-                               + head_synt_role_F
-                               + (1|head_lemma)
-                               + (1|author),
-                               data=np_data)
+lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * avg_srp_c * NP_len_c
+                             + head_synt_role_F
+                             + (1+head_synt_role_F|head_lemma)
+                             + (1|author)
+                             + (1|journal),
+                             data=np_data)
 summary(lm_sigma)
 # write model summary to file
 output <- capture.output(summary(lm_sigma))
@@ -126,20 +126,20 @@ dev.off()
 
 # plot model effects
 
+# effect of year * average surprisal * NP length
+pdf("sigma_np_effect_year_avgSrp_npLen.pdf")
+ggeffects::ggeffect(lm_sigma, c("year_c", "avg_srp_c", "NP_len_c")) %>%
+  plot() +
+  labs(x = "Year, Average Surprisal and NP Length",
+       y = "IFC",
+       title = "")
+dev.off()
+
 # effect of year
 pdf("sigma_np_effect_year.pdf")
 ggeffects::ggeffect(lm_sigma, c("year_c")) %>%
   plot() +
   labs(x = "Year",
-       y = "IFC",
-       title = "")
-dev.off()
-
-# effect of average surprisal and NP length
-pdf("sigma_np_effect_avgSrp_npLen.pdf")
-ggeffects::ggeffect(lm_sigma, c("avg_srp_c", "NP_len_c")) %>%
-  plot() +
-  labs(x = "Average Surprisal and NP Length",
        y = "IFC",
        title = "")
 dev.off()
@@ -188,11 +188,11 @@ results <- future.apply::future_lapply(
     test  <- rsample::assessment(split)
     
     # fit mixed-effects model
-    fit <- glmmTMB::glmmTMB(sigma_gamma ~ year_c
-                            + avg_srp_c * NP_len_c
+    fit <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * avg_srp_c * NP_len_c
                             + head_synt_role_F
-                            + (1|head_lemma)
-                            + (1|author),
+                            + (1+head_synt_role_F|head_lemma)
+                            + (1|author)
+                            + (1|journal),
                             data=np_data)
     
     # predict on test data

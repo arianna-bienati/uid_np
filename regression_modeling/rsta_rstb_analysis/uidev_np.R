@@ -48,7 +48,7 @@ np_data <- data %>%
   filter(!is.na(sigma_gamma)) # remove observations without sigma_gamma value
 
 # sample
-set.seed(734)
+set.seed(155)
 np_data <- np_data %>%
   group_by(year) %>%  # stratify by year
   sample_frac(0.5) %>%  # take 50 % from each category
@@ -88,14 +88,17 @@ sink()
 # adjust 0 values
 np_data$uidev_adj <- ifelse(np_data$uid_dev == 0, 1e-6, np_data$uid_dev)
 
+# inspect data
+head(np_data)
+
 ### REGRESSION MODEL ###
 
 # regression model
-lm_uidev <- glmmTMB::glmmTMB(uidev_adj ~ year_c
-                                     + avg_srp_c * NP_len_c
+lm_uidev <- glmmTMB::glmmTMB(uidev_adj ~ year_c * avg_srp_c * NP_len_c
                                      + head_synt_role_F
-                                     + (1|head_lemma)
-                                     + (1|author),
+                                     + (1+head_synt_role_F|head_lemma)
+                                     + (1|author)
+                                     + (1|journal),
                                      family=Gamma(link = "log"),
                                      data=np_data)
 summary(lm_uidev)
@@ -131,20 +134,20 @@ dev.off()
 
 # plot model effects
 
+# effect of year * average surprisal * NP length
+pdf("uidev_np_effect_year_avgSrp_npLen.pdf")
+ggeffects::ggeffect(lm_uidev, c("year_c", "avg_srp_c", "NP_len_c")) %>%
+  plot() +
+  labs(x = "Year, Average Surprisal and NP Length",
+       y = "UID Dev",
+       title = "")
+dev.off()
+
 # effect of year
 pdf("uidev_np_effect_year.pdf")
 ggeffects::ggeffect(lm_uidev, c("year_c")) %>%
   plot() +
   labs(x = "Year",
-       y = "UID Dev",
-       title = "")
-dev.off()
-
-# effect of average surprisal and NP length
-pdf("uidev_np_effect_avgSrp_npLen.pdf")
-ggeffects::ggeffect(lm_uidev, c("avg_srp_c", "NP_len_c")) %>%
-  plot() +
-  labs(x = "Average Surprisal and NP Length",
        y = "UID Dev",
        title = "")
 dev.off()
@@ -178,7 +181,12 @@ dev.off()
 
 ### CROSS-VALIDATION ###
 
-options(future.rlibPaths="/scratch/landwehr/R/4.5")
+my_lib <- "/scratch/landwehr/R/4.5"
+default_libs <- .libPaths()
+
+#print(my_lib, default_libs)
+
+.libPaths(c(my_lib, default_libs))
 
 # use all available cores except one
 future::plan(future::multisession, workers = parallel::detectCores() - 1)
@@ -195,11 +203,11 @@ results <- future.apply::future_lapply(
     test  <- rsample::assessment(split)
     
     # fit mixed-effects model
-    fit <- glmmTMB::glmmTMB(uid_dev_adj ~ year_c
-                            + avg_srp_c * NP_len_c
+    fit <- glmmTMB::glmmTMB(uidev_adj ~ year_c * avg_srp_c * NP_len_c
                             + head_synt_role_F
-                            + (1|head_lemma)
-                            + (1|author),
+                            + (1+head_synt_role_F|head_lemma)
+                            + (1|author)
+                            + (1|journal),
                             family=Gamma(link = "log"),
                             data=np_data)
     
