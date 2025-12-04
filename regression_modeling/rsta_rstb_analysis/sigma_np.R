@@ -176,6 +176,7 @@ dev.off()
 
 my_lib <- "/scratch/landwehr/R/4.5"
 default_libs <- .libPaths()
+.libPaths(c(my_lib, default_libs))
 
 # use all available cores except one
 future::plan(future::multisession, workers = parallel::detectCores() - 1)

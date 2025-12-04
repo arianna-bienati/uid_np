@@ -182,6 +182,7 @@ dev.off()
 
 my_lib <- "/scratch/landwehr/R/4.5"
 default_libs <- .libPaths()
+.libPaths(c(my_lib, default_libs))
 
 #print(my_lib, default_libs)
 
