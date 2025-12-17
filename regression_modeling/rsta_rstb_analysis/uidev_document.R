@@ -73,14 +73,14 @@ sink("uidev_doc_output.txt", append=T)
 
 # check minimum value of uid dev
 print("Minimum value of UIDev:")
-min(np_data$uid_dev)
+min(doc_data$uid_dev)
 # check how many uid dev values are 0 or smaller
 print("Number of UIDev values <= 0:")
-sum(np_data$uid_dev <= 0, na.rm=TRUE)
+sum(doc_data$uid_dev <= 0, na.rm=TRUE)
 # where are the 0 values
 print("Location of 0 values:")
-which(np_data$uid_dev == 0)
-np_data$uid_dev[np_data$uid_dev == 0]
+which(doc_data$uid_dev == 0)
+doc_data$uid_dev[doc_data$uid_dev == 0]
 
 # stop redirecting output to file
 sink()
@@ -94,10 +94,10 @@ head(doc_data)
 ### REGRESSION MODEL ###
 
 # regression model
-lm_uidev <- glmmTMB::glmmTMB(uidev_adj ~ year_c * avg_srp_c * doc_len_c
-                             + vocab_size
-                             + (1|author)
-                             + (1+doc_len_c|journal),
+lm_uidev <- glmmTMB::glmmTMB(uidev_adj ~ avg_srp_c * doc_len_c
+                             + year_c
+                             + vocab_size_c
+                             + (1|journal),
                              family=Gamma(link = "log"),
                              data=doc_data)
 summary(lm_uidev)

@@ -73,14 +73,14 @@ sink("sigma_doc_output.txt", append=T)
 
 # check minimum value of sigma
 print("Minimum value of sigma:")
-min(np_data$sigma_gamma)
+min(doc_data$sigma_gamma)
 # check how many sigma values are 0 or smaller
 print("Number of sigma values <= 0:")
-sum(np_data$sigma_gamma <= 0, na.rm=TRUE)
+sum(doc_data$sigma_gamma <= 0, na.rm=TRUE)
 # where are the 0 values
 print("Location of 0 values:")
-which(np_data$sigma_gamma == 0)
-np_data$uid_dev[np_data$sigma_gamma == 0]
+which(doc_data$sigma_gamma == 0)
+doc_data$uid_dev[doc_data$sigma_gamma == 0]
 
 # stop redirecting output to file
 sink()
@@ -88,10 +88,10 @@ sink()
 ### REGRESSION MODEL ###
 
 # regression model
-lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * avg_srp_c * doc_len_c
-                             + vocab_size
-                             + (1|author)
-                             + (1+doc_len_c|journal),
+lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ avg_srp_c * doc_len_c
+                             + year_c
+                             + vocab_size_c
+                             + (1|journal),
                              data=doc_data)
 summary(lm_sigma)
 # write model summary to file
@@ -105,7 +105,7 @@ sink("sigma_doc_output.txt", append=T)
 
 # AIC
 print("AIC:")
-AIC(lm_uidev)
+AIC(lm_sigma)
 # random effects variance
 print("Random effects variance:")
 VarCorr(lm_sigma)

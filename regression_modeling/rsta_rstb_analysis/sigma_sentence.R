@@ -85,8 +85,8 @@ sink()
 
 # regression model
 lm_sigma <- glmmTMB::glmmTMB(sigma_gamma ~ year_c * avg_srp_c * sent_len_c
-                             + (1|author)
-                             + (1+sent_len_c|journal),
+                             + (1+sent_len_c|author)
+                             + (1|journal),
                              data=sent_data)
 summary(lm_sigma)
 # write model summary to file
