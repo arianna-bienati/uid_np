@@ -47,7 +47,7 @@ np_data <- data %>%
 # sample
 set.seed(155)
 np_data <- np_data %>%
-  group_by(year) %>%  # stratify by year
+  group_by(year, journal) %>%  # stratify by year and journal
   sample_frac(0.5) %>%  # take 50 % from each category
   ungroup()
 
@@ -67,6 +67,44 @@ contrasts(np_data$head_synt_role_F) = contr.treatment(3, base=1) # baseline=nsub
 
 # redirect output to file
 sink("sigma_np_output.txt", append=T)
+
+# get minimum and maximum values of year
+print("Minimum value of year:")
+min(np_data$year)
+print("Maximum value of year:")
+max(np_data$year)
+
+# get number of observations per year
+print("Number of observations per year:")
+np_data %>% count(year)
+
+# get number of observations per journal
+print("Number of observations per journal:")
+np_data %>% count(journal)
+
+# get number of observations per head syntactic role
+print("Number of observations per head syntactic role:")
+np_data %>% count(head_synt_role)
+
+# get minimum, maximum, mean and standard deviation of average surprisal
+print("Minimum value of average surprisal:")
+min(np_data$avg_srp)
+print("Maximum value of average surprisal:")
+max(np_data$avg_srp)
+print("Mean value of average surprisal:")
+mean(np_data$avg_srp)
+print("Standard deviation of average surprisal:")
+sd(np_data$avg_srp)
+
+# get minimum, maximum, mean and standard deviation of length
+print("Minimum value of NP length:")
+min(np_data$NP_len)
+print("Maximum value of NP length:")
+max(np_data$NP_len)
+print("Mean value of NP length:")
+mean(np_data$NP_len)
+print("Standard deviation of NP length:")
+sd(np_data$NP_len)
 
 # check minimum value of sigma
 print("Minimum value of sigma:")
@@ -125,11 +163,31 @@ DHARMa::plotResiduals(sim_lm_sigma) # plot residuals against expected value
 DHARMa::plotResiduals(sim_lm_sigma, form = np_data$year_c) # plot residuals against predictor
 dev.off()
 
+# save model
+save(lm_sigma, file = "lm_sigma_np.rda")
+
 # plot model effects
+
+# function to center a concrete variable value
+center_value <- function(data,column,x){
+  mean_value = mean(data[[column]])
+  centered = x - mean_value
+}
+
+# get centered value of specific average surprisal values
+avgSrp_1 <- center_value(np_data,"avg_srp",2)
+avgSrp_2 <- center_value(np_data,"avg_srp",7)
+avgSrp_3 <- center_value(np_data,"avg_srp",12)
+# get centered value of specific NP length values
+NPlen_1 <- center_value(np_data,"NP_len",5)
+NPlen_2 <- center_value(np_data,"NP_len",15)
+NPlen_3 <- center_value(np_data,"NP_len",20)
 
 # effect of year * average surprisal * NP length
 pdf("sigma_np_effect_year_avgSrp_npLen.pdf")
-ggeffects::ggeffect(lm_sigma, c("year_c", "avg_srp_c", "NP_len_c")) %>%
+ggeffects::ggeffect(lm_sigma, c("year_c",
+                                "avg_srp_c[avgSrp_1,avgSrp_2,avgSrp_3]",
+                                "NP_len_c[NPlen_1,NPlen_2,NPlen_3]")) %>%
   plot() +
   labs(x = "Year, Average Surprisal and NP Length",
        y = "IFC",

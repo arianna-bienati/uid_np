@@ -55,7 +55,7 @@ head(doc_data)
 # sample
 set.seed(155)
 doc_data <- doc_data %>%
-  group_by(year) %>%  # stratify by year
+  group_by(year, journal) %>%  # stratify by year and journal
   sample_frac(0.75) %>%  # take 75 % from each category
   ungroup()
 
@@ -70,6 +70,40 @@ doc_data$vocab_size_c <- scale(doc_data$vocab_size, center=T, scale=F)
 
 # redirect output to file
 sink("uidev_doc_output.txt", append=T)
+
+# get minimum and maximum values of year
+print("Minimum value of year:")
+min(doc_data$year)
+print("Maximum value of year:")
+max(doc_data$year)
+
+# get number of observations per year
+print("Number of observations per year:")
+doc_data %>% count(year)
+
+# get number of observations per journal
+print("Number of observations per journal:")
+doc_data %>% count(journal)
+
+# get minimum, maximum, mean and standard deviation of average surprisal
+print("Minimum value of average surprisal:")
+min(doc_data$avg_srp)
+print("Maximum value of average surprisal:")
+max(doc_data$avg_srp)
+print("Mean value of average surprisal:")
+mean(doc_data$avg_srp)
+print("Standard deviation of average surprisal:")
+sd(doc_data$avg_srp)
+
+# get minimum, maximum, mean and standard deviation of length
+print("Minimum value of document length:")
+min(doc_data$doc_len)
+print("Maximum value of document length:")
+max(doc_data$doc_len)
+print("Mean value of document length:")
+mean(doc_data$doc_len)
+print("Standard deviation of doc length:")
+sd(doc_data$doc_len)
 
 # check minimum value of uid dev
 print("Minimum value of UIDev:")
@@ -131,13 +165,43 @@ DHARMa::plotResiduals(sim_lm_uidev) # plot residuals against expected value
 DHARMa::plotResiduals(sim_lm_uidev, form = doc_data$year_c) # plot residuals against predictor
 dev.off()
 
+# save model
+save(lm_uidev, file = "lm_uidev_doc.rda")
+
 # plot model effects
+
+# function to center a concrete variable value
+center_value <- function(data,column,x){
+  mean_value = mean(data[[column]])
+  centered = x - mean_value
+}
+
+# get centered value of specific average surprisal values
+avgSrp_1 <- center_value(doc_data,"avg_srp",10)
+avgSrp_2 <- center_value(doc_data,"avg_srp",20)
+avgSrp_3 <- center_value(doc_data,"avg_srp",30)
+# get centered value of specific document length values
+docLen_1 <- center_value(doc_data,"doc_len",500)
+docLen_2 <- center_value(doc_data,"doc_len",1000)
+docLen_3 <- center_value(doc_data,"doc_len",2000)
 
 # effect of year * average surprisal * document length
 pdf("uidev_doc_effect_year_avgSrp_docLen.pdf")
-ggeffects::ggeffect(lm_uidev, c("year_c", "avg_srp_c", "doc_len_c")) %>%
+ggeffects::ggeffect(lm_uidev, c("year_c",
+                                "avg_srp_c[avgSrp_1,avg_Srp_2,avgSrp_3]",
+                                "doc_len_c[docLen_1,docLen_2,docLen_3]")) %>%
   plot() +
   labs(x = "Year, Average Surprisal and Document Length",
+       y = "UID Dev",
+       title = "")
+dev.off()
+
+# effect of year * average surprisal * document length
+pdf("uidev_doc_effect_avgSrp_docLen.pdf")
+ggeffects::ggeffect(lm_uidev, c("avg_srp_c",
+                                "doc_len_c[docLen_1,docLen_2,docLen_3]")) %>%
+  plot() +
+  labs(x = "Average Surprisal and Document Length",
        y = "UID Dev",
        title = "")
 dev.off()

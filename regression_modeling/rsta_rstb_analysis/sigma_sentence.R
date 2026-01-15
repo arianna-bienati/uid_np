@@ -46,7 +46,7 @@ sent_data <- data %>%
 # sample
 set.seed(155)
 sent_data <- sent_data %>%
-  group_by(year) %>%  # stratify by year
+  group_by(year, journal) %>%  # stratify by year and journal
   sample_frac(0.5) %>%  # take 50 % from each category
   ungroup()
 
@@ -63,6 +63,40 @@ levels(sent_data$journal_F) # show factor levels
 
 # redirect output to file
 sink("sigma_sent_output.txt", append=T)
+
+# get minimum and maximum values of year
+print("Minimum value of year:")
+min(sent_data$year)
+print("Maximum value of year:")
+max(sent_data$year)
+
+# get number of observations per year
+print("Number of observations per year:")
+sent_data %>% count(year)
+
+# get number of observations per journal
+print("Number of observations per journal:")
+sent_data %>% count(journal)
+
+# get minimum, maximum, mean and standard deviation of average surprisal
+print("Minimum value of average surprisal:")
+min(sent_data$avg_srp)
+print("Maximum value of average surprisal:")
+max(sent_data$avg_srp)
+print("Mean value of average surprisal:")
+mean(sent_data$avg_srp)
+print("Standard deviation of average surprisal:")
+sd(sent_data$avg_srp)
+
+# get minimum, maximum, mean and standard deviation of length
+print("Minimum value of sentence length:")
+min(sent_data$sent_len)
+print("Maximum value of sentence length:")
+max(sent_data$sent_len)
+print("Mean value of sentence length:")
+mean(sent_data$sent_len)
+print("Standard deviation of sentence length:")
+sd(sent_data$sent_len)
 
 # check minimum value of sigma
 print("Minimum value of sigma:")
@@ -119,11 +153,31 @@ DHARMa::plotResiduals(sim_lm_sigma) # plot residuals against expected value
 DHARMa::plotResiduals(sim_lm_sigma, form = sent_data$year_c) # plot residuals against predictor
 dev.off()
 
+# save model
+save(lm_sigma, file = "lm_sigma_sent.rda")
+
 # plot model effects
+
+# function to center a concrete variable value
+center_value <- function(data,column,x){
+  mean_value = mean(data[[column]])
+  centered = x - mean_value
+}
+
+# get centered value of specific average surprisal values
+avgSrp_1 <- center_value(sent_data,"avg_srp",10)
+avgSrp_2 <- center_value(sent_data,"avg_srp",15)
+avgSrp_3 <- center_value(sent_data,"avg_srp",20)
+# get centered value of specific sentence length values
+sentLen_1 <- center_value(sent_data,"sent_len",10)
+sentLen_2 <- center_value(sent_data,"sent_len",20)
+sentLen_3 <- center_value(sent_data,"sent_len",30)
 
 # effect of year * average surprisal * sentence length
 pdf("sigma_sent_effect_year_avgSrp_sentLen.pdf")
-ggeffects::ggeffect(lm_sigma, c("year_c", "avg_srp_c", "sent_len_c")) %>%
+ggeffects::ggeffect(lm_sigma, c("year_c",
+                                "avg_srp_c[avgSrp_1,avgSrp_2,avgSrp_3]",
+                                "sent_len_c[sentLen_1,sentLen_2,sentLen_3]")) %>%
   plot() +
   labs(x = "Year, Average Surprisal and Sentence Length",
        y = "IFC",
