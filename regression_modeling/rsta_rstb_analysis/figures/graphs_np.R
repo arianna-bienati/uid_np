@@ -59,17 +59,25 @@ center_value <- function(data,column,x){
   centered = x - mean_value
 }
 
+# get mean and standard deviation of average surprisal
+mean(np_data$avg_srp) # 7.448382
+sd(np_data$avg_srp) # 2.431156
+
+# get mean and standard deviation of NP length
+mean(np_data$NP_len) # 8.532716
+sd(np_data$NP_len) # 8.297404
+
 # get centered value of specific average surprisal values
-avgSrp_1 <- center_value(np_data,"avg_srp",2)
+avgSrp_1 <- center_value(np_data,"avg_srp",3)
 avgSrp_2 <- center_value(np_data,"avg_srp",7)
-avgSrp_3 <- center_value(np_data,"avg_srp",12)
+avgSrp_3 <- center_value(np_data,"avg_srp",11)
 avgSrp_1
 avgSrp_2
 avgSrp_3
 # get centered value of specific NP length values
-NPlen_1 <- center_value(np_data,"NP_len",5)
-NPlen_2 <- center_value(np_data,"NP_len",15)
-NPlen_3 <- center_value(np_data,"NP_len",20)
+NPlen_1 <- center_value(np_data,"NP_len",1)
+NPlen_2 <- center_value(np_data,"NP_len",9)
+NPlen_3 <- center_value(np_data,"NP_len",17)
 NPlen_1
 NPlen_2
 NPlen_3
@@ -91,32 +99,49 @@ load("./results/server/uidev_np/20260203/lm_uidev_np.rda")
 # effect of year * average surprisal * NP length
 ggeffects::ggeffect(lm_uidev,
                     c("year_c",
-                      "avg_srp_c[-5.448382,-0.4483816,4.551618]",
-                      "NP_len_c[-3.532716,6.467284,11.46728]")
+                      "avg_srp_c[-4.448382,-0.4483816,3.551618]",
+                      "NP_len_c[-7.532716,0.4672841,8.467284]")
                     ) %>%
   plot() +
   labs(x = "Year, Average Surprisal and NP Length",
        y = "UID Dev",
        title = "",
-       color = "Avg. Surprisal") +
-  theme_minimal() +
+       color = "Avg. Surprisal",
+       axis.title.x = element_text(size = 12),
+       axis.title.y = element_text(size = 12)) +
+  theme_minimal(base_size=15) +
   facet_wrap(~facet,
              labeller = labeller(
-               facet = c("-3.532716" = "NP Length: 5",
-                         "6.467284" = "NP Length: 15",
-                         "11.46728" = "NP Length: 20"))) +
-  scale_color_manual(values=c("#69b3a2", "purple", "black"),
-                     labels = c("2", "7", "12")) +
+               facet = c("-7.532716" = "NP Length: 1 (mean - SD)",
+                         "0.4672841" = "NP Length: 9 (mean)",
+                         "8.467284" = "NP Length: 17 (mean + SD)"))) +
+  scale_color_manual(values=c("steelblue", "#3c901d", "orange"),
+                     labels = c("3 (mean - 2 SD)", "7 (mean)", "11 (mean + 2 SD)")) +
   scale_x_continuous(breaks = c(-71.95009,-41.95009,-11.95009,18.04991),
                      labels = c("1890","1920","1950","1980"))
+
+# save plot
+ggsave("./results/figures/uidev_np_time_avgSrp_npLen.png",
+       device = "png", create.dir = TRUE,
+       width = 24, height = 12, unit = "cm",
+       dpi = 300, bg = "white")
 
 # effect of head syntactic role
 ggeffects::ggeffect(lm_uidev, c("head_synt_role_F")) %>%
   plot() +
   labs(x = "Head Syntactic Role",
        y = "UID Dev",
-       title = "") +
-  theme_minimal()
+       title = "",
+       axis.title.x = element_text(size = 12),
+       axis.title.y = element_text(size = 12)) +
+  theme_minimal(base_size = 15)
+
+# save plot
+ggsave("./results/figures/uidev_np_headSynRole.png",
+       device = "png", create.dir = TRUE,
+       width = 24, height = 12, unit = "cm",
+       dpi = 300, bg = "white")
+
 
 
 ###### Sigma ######
@@ -127,30 +152,45 @@ load("./results/server/sigma_np/20260204/lm_sigma_np.rda")
 # effect of year * average surprisal * NP length
 ggeffects::ggeffect(lm_sigma,
                     c("year_c",
-                      "avg_srp_c[-5.448382,-0.4483816,4.551618]",
-                      "NP_len_c[-3.532716,6.467284,11.46728]")) %>%
+                      "avg_srp_c[-4.448382,-0.4483816,3.551618]",
+                      "NP_len_c[-7.532716,0.4672841,8.467284]")) %>%
   plot() +
   labs(x = "Year, Average Surprisal and NP Length",
        y = "IFC",
        title = "",
-       color = "Avg. Surprisal") +
-  theme_minimal() +
+       color = "Avg. Surprisal",
+       axis.title.x = element_text(size = 12),
+       axis.title.y = element_text(size = 12)) +
+  theme_minimal(base_size = 15) +
   facet_wrap(~facet,
              labeller = labeller(
-               facet = c("-3.532716" = "NP Length: 5",
-                         "6.467284" = "NP Length: 15",
-                         "11.46728" = "NP Length: 20"))) +
-  scale_color_manual(values=c("#69b3a2", "purple", "black"),
-                     labels = c("2", "7", "12")) +
+               facet = c("-7.532716" = "NP Length: 1 (mean - SD)",
+                         "0.4672841" = "NP Length: 9 (mean)",
+                         "8.467284" = "NP Length: 17 (mean + SD)"))) +
+  scale_color_manual(values=c("steelblue", "#3c901d", "orange"),
+                     labels = c("3 (mean - 2 SD)", "7 (mean)", "11 (mean + 2 SD)")) +
   scale_x_continuous(breaks = c(-71.95009,-41.95009,-11.95009,18.04991),
                      labels = c("1890","1920","1950","1980"))
+
+# save plot
+ggsave("./results/figures/sigma_np_year_avgSrp_npLen.png",
+       device = "png", create.dir = TRUE,
+       width = 24, height = 12, unit = "cm",
+       dpi = 300, bg = "white")
 
 # effect of head syntactic role
 ggeffects::ggeffect(lm_sigma, c("head_synt_role_F")) %>%
   plot() +
   labs(x = "Head Syntactic Role",
        y = "IFC",
-       title = "") +
-  theme_minimal() +
-  scale_color_manual(values=c("#69b3a2", "purple", "black"))
+       title = "",
+       axis.title.x = element_text(size = 12),
+       axis.title.y = element_text(size = 12)) +
+  theme_minimal(base_size = 15)
+
+# save plot
+ggsave("./results/figures/sigma_np_headSynRole.png",
+       device = "png", create.dir = TRUE,
+       width = 24, height = 12, unit = "cm",
+       dpi = 300, bg = "white")
 
